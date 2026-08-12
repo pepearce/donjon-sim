@@ -148,7 +148,7 @@ function onArrival(world: World, team: Team, floor: Floor): void {
     return;
   }
 
-  if (room.state === 'cleared' && room.restockDueTick <= world.tick) scheduleRestock(world, room);
+  if (room.state === 'cleared' && room.restockDueTick <= world.tick) scheduleRestock(world, floor, room);
 
   if (onStairs(floor, team)) descend(world, team, floor);
 }

@@ -2,7 +2,7 @@ import { DAY_TICKS, DECAY_EVERY } from '@donjon/shared';
 import { emit } from './emit.js';
 import { attemptStabilise, resolveCombatRound } from './systems/combat.js';
 import { resolveBleedOut, sweepCorpse } from './systems/death.js';
-import { bankLoot, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
+import { bankLoot, canCamp, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
 import {
   resolveLoan,
   tickScheme,
@@ -17,7 +17,8 @@ import { activeTeamCount, arrivals, formTeams, retireStragglers } from './system
 import { updateSurvivorRecord } from './systems/records.js';
 import { fleeGrudges } from './systems/relations.js';
 import { driftMorale } from './systems/doctrine.js';
-import { resolveRestock } from './systems/restock.js';
+import { resolveRestock, sweepCleared } from './systems/restock.js';
+import { resupply } from './systems/shop.js';
 import { armTrap } from './systems/traps.js';
 import { COMMIT_TICKS, chooseAction } from './systems/teamAi.js';
 import { floorOf, livingRoster, monstersIn, roster } from './world.js';
@@ -83,11 +84,18 @@ function applyAction(world: World, team: Team): void {
   }
 
   switch (action) {
-    case 'REST':
+    case 'REST': {
+      const safe = monstersIn(world, team.floorId, team.roomIdx).length === 0;
+      if (!safe || !(team.goldCp >= 400 || canCamp(world, team))) {
+        team.state = 'delving';
+        travelTowards(world, team, floor, floor.hearthRoom);
+        return;
+      }
       team.state = 'resting';
       team.restUntilTick = world.tick + 30;
       restAndHeal(world, team);
       return;
+    }
     case 'FLEE': {
       team.state = 'fleeing';
       travelTowards(world, team, floor, floor.entryRoom);
@@ -107,6 +115,20 @@ function applyAction(world: World, team: Team): void {
         return;
       }
       travelTowards(world, team, floor, floor.entryRoom);
+      return;
+    case 'RESUPPLY':
+      team.state = 'delving';
+      if (floor.shopRoom < 0) {
+        advanceTeam(world, team);
+        return;
+      }
+      if (team.roomIdx === floor.shopRoom) {
+        resupply(world, team);
+        team.lastAction = 'EXPLORE';
+        team.commitUntilTick = world.tick + COMMIT_TICKS.EXPLORE;
+        return;
+      }
+      travelTowards(world, team, floor, floor.shopRoom);
       return;
     case 'DESCEND':
       team.state = 'delving';
@@ -183,6 +205,7 @@ export function step(world: World): void {
   formTeams(world);
 
   if (world.tick % DECAY_EVERY === 0) {
+    sweepCleared(world);
     driftMorale(world);
     decayRenown(world);
     rankTeams(world);

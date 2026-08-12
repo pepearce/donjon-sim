@@ -16,6 +16,8 @@ export const TILE_FLOOR = 1;
 export const TILE_DOOR = 2;
 export const TILE_STAIRS = 3;
 export const TILE_RUBBLE = 4;
+export const TILE_HEARTH = 5;
+export const TILE_SHOP = 6;
 
 export function isWalkable(
   floor: { width: number; height: number; tiles: Uint8Array },
@@ -126,6 +128,8 @@ export interface Floor {
   dist: Uint8Array;
   entryRoom: number;
   stairsRoom: number;
+  hearthRoom: number;
+  shopRoom: number;
   dangerCr: number;
   generatedTick: number;
 }

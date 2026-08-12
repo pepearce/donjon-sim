@@ -42,6 +42,8 @@ export interface FloorMapDTO {
   rooms: RoomPublic[];
   entryRoom: number;
   stairsRoom: number;
+  hearthRoom: number;
+  shopRoom: number;
 }
 
 export interface FloorIndexEntry {
@@ -240,6 +242,7 @@ export interface MemorialEntryDTO {
 
 export interface SnapshotDTO {
   v: number;
+  epoch: string;
   seq: number;
   tick: number;
   ts: number;

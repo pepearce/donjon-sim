@@ -2,10 +2,10 @@ import { RngDomain, rngFor } from '@donjon/shared';
 import { floorOf, livingRoster, monstersIn, roster } from '../world.js';
 import { traitFrac } from './traits.js';
 import { doctrineFor } from './doctrine.js';
-import { canCamp } from './economy.js';
+import { canCamp, rationPriceCp } from './economy.js';
 import { clamp, type Floor, type Team, type World } from '../types.js';
 
-export type Action = 'EXPLORE' | 'DESCEND' | 'LOOT' | 'REST' | 'RETREAT' | 'FLEE';
+export type Action = 'EXPLORE' | 'DESCEND' | 'LOOT' | 'REST' | 'RETREAT' | 'FLEE' | 'RESUPPLY';
 
 export const COMMIT_TICKS: Record<Action, number> = {
   EXPLORE: 6,
@@ -14,6 +14,7 @@ export const COMMIT_TICKS: Record<Action, number> = {
   REST: 20,
   RETREAT: 30,
   FLEE: 0,
+  RESUPPLY: 20,
 };
 
 const COMMIT_BONUS = 12e6;
@@ -39,6 +40,11 @@ export interface AiContext {
   carriedCp: number;
   canAffordRest: boolean;
   canRecover: boolean;
+  canRestHere: boolean;
+  hearthDist: number;
+  shopDist: number;
+  rationPriceCp: number;
+  goldCp: number;
   patience: number;
   cravenFrac: number;
   boldFrac: number;
@@ -55,6 +61,18 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
   const enemies = monstersIn(world, team.floorId, team.roomIdx);
   const meanLevel = living.length > 0 ? living.reduce((n, h) => n + h.level, 0) / living.length : 1;
   const uncleared = floor.rooms.filter((r) => r.state === 'stocked').length;
+  const hearthDist =
+    floor.hearthRoom === team.roomIdx
+      ? 0
+      : (floor.dist[team.roomIdx * floor.rooms.length + floor.hearthRoom] ?? 255);
+  const campable = canCamp(world, team);
+  const restHere = enemies.length === 0 && (team.goldCp >= 400 || campable);
+  const shopDist =
+    floor.shopRoom < 0
+      ? 255
+      : floor.shopRoom === team.roomIdx
+        ? 0
+        : (floor.dist[team.roomIdx * floor.rooms.length + floor.shopRoom] ?? 255);
   const enemyPower = enemies.reduce((n, m) => n + m.cr, 0);
   const teamPower = living.reduce((n, h) => n + h.level * 0.9, 0) || 0.5;
 
@@ -77,7 +95,12 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     hasDeeperFloor: floor.depth < 10,
     carriedCp: team.carriedCp,
     canAffordRest: team.goldCp >= 400,
-    canRecover: team.goldCp >= 400 || canCamp(world, team),
+    canRecover: restHere || hearthDist < 255,
+    canRestHere: restHere,
+    hearthDist,
+    shopDist,
+    rationPriceCp: rationPriceCp(world, floor.depth),
+    goldCp: team.goldCp,
     patience: doctrineFor(world, team).patience,
     cravenFrac: traitFrac(living, 'craven'),
     boldFrac: traitFrac(living, 'bold'),
@@ -116,14 +139,16 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
 
   const loot = 15 + 55 * ctx.greed + 20 * Math.log10(1 + ctx.roomLootCp / 100) - 100 * (ctx.inCombat ? 1 : 0);
 
+  const travel = ctx.canRestHere ? 0 : 2.2 * Math.min(24, ctx.hearthDist) + (ctx.hearthDist >= 255 ? 200 : 0);
+
   const rest =
     5 +
     90 * (1 - ctx.hpFrac) ** 1.5 +
     0.5 * (60 - ctx.morale) +
-    30 * (ctx.roomSafe ? 1 : 0) -
-    60 * (ctx.rationsFrac <= 0 ? 1 : 0) -
+    30 * (ctx.roomSafe ? 1 : 0) +
+    14 * (ctx.hearthDist <= 3 ? 1 : 0) -
     80 * (ctx.inCombat ? 1 : 0) -
-    120 * (ctx.canRecover ? 0 : 1);
+    travel;
 
   const retreat =
     10 +
@@ -146,10 +171,28 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
       18 * ctx.boldFrac
     : -1e6;
 
-  return { EXPLORE: explore, DESCEND: descend, LOOT: loot, REST: rest, RETREAT: retreat, FLEE: flee };
+  const resupply =
+    ctx.shopDist >= 255 || ctx.carriedCp + ctx.goldCp < ctx.rationPriceCp * 6
+      ? -1e6
+      : 12 +
+        75 * (1 - ctx.rationsFrac) ** 1.5 +
+        20 * (ctx.rationsFrac <= 0.25 ? 1 : 0) -
+        2.2 * Math.min(24, ctx.shopDist) -
+        80 * (ctx.inCombat ? 1 : 0) -
+        45 * Math.max(0, 0.4 - ctx.hpFrac);
+
+  return {
+    EXPLORE: explore,
+    DESCEND: descend,
+    LOOT: loot,
+    REST: rest,
+    RETREAT: retreat,
+    FLEE: flee,
+    RESUPPLY: resupply,
+  };
 }
 
-const ORDER: Action[] = ['EXPLORE', 'DESCEND', 'LOOT', 'REST', 'RETREAT', 'FLEE'];
+const ORDER: Action[] = ['EXPLORE', 'DESCEND', 'LOOT', 'REST', 'RETREAT', 'FLEE', 'RESUPPLY'];
 
 export function chooseAction(world: World, team: Team): Action {
   const floor = floorOf(world, team.floorId);
@@ -159,13 +202,15 @@ export function chooseAction(world: World, team: Team): Action {
   const ticksSinceDeepest = world.tick - team.lastDeepestTick;
   const raw = score(ctx, ticksSinceDeepest);
 
+  const canPatchUpHere = ctx.canRestHere;
+  const emergency = ctx.downed > 0 || (ctx.worstHpFrac < 0.15 && !canPatchUpHere && ctx.hearthDist > 6);
+
   const quantised = new Map<Action, number>();
   for (const action of ORDER) {
     let value = Math.round((raw[action] ?? -1e6) * 1e6);
     if (action === team.lastAction && world.tick < team.commitUntilTick) value += COMMIT_BONUS;
-    if ((action === 'RETREAT' || action === 'FLEE') && (ctx.worstHpFrac < 0.15 || ctx.downed > 0)) {
-      value += EMERGENCY_BONUS;
-    }
+    if ((action === 'RETREAT' || action === 'FLEE') && emergency) value += EMERGENCY_BONUS;
+    if (action === 'REST' && ctx.worstHpFrac < 0.15 && !emergency) value += EMERGENCY_BONUS;
     quantised.set(action, value);
   }
 

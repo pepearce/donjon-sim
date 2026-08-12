@@ -2,7 +2,7 @@ import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { ITEMS } from '../tables.js';
 import { livingRoster } from '../world.js';
-import { COIN_SETPOINT } from './economy.js';
+import { COIN_SETPOINT, RATION_CAP } from './economy.js';
 import { hasTrait } from './traits.js';
 import { RARITY_BASE_CP, RARITY_NAMES, type Hero, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
 
@@ -67,6 +67,8 @@ export function dropLoot(world: World, team: Team, room: Room): void {
 
   const coin = Math.round((30 + 45 * depth) * (0.5 + rng.float()));
   const item = rng.chance(0.45) ? makeItem(world, depth, null) : null;
+  const supplies = rng.chance(0.3) ? rng.int(3, 9) : 0;
+  if (supplies > 0) team.rations = Math.min(RATION_CAP, team.rations + supplies);
 
   const factor = restockCostFactor(
     world.dungeon.treasuryCp +
@@ -102,6 +104,6 @@ export function dropLoot(world: World, team: Team, room: Room): void {
     teamId: team.id,
     floorId: team.floorId,
     roomId: room.id,
-    payload: { coin, item: item?.name ?? '', valueCp: total, room: room.name },
+    payload: { coin, item: item?.name ?? '', valueCp: total, room: room.name, rations: supplies },
   });
 }

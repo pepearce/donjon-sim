@@ -111,12 +111,18 @@ export function dailyUpkeep(world: World): void {
 }
 
 export const RATION_BURN_EVERY = 10;
+export const CAMP_BURN_EVERY = 5;
+
+export function atHearth(world: World, team: Team): boolean {
+  const floor = floorOf(world, team.floorId);
+  return !!floor && floor.hearthRoom === team.roomIdx;
+}
 
 export function canCamp(world: World, team: Team): boolean {
-  if (team.rations <= 0) return false;
   const floor = floorOf(world, team.floorId);
   const room = floor?.rooms[team.roomIdx];
   if (!room || room.state === 'stocked') return false;
+  if (team.rations <= 0 && floor?.hearthRoom !== team.roomIdx) return false;
   return !world.monsters.some((m) => m.alive && m.floorId === team.floorId && m.roomId === room.id);
 }
 
@@ -140,21 +146,38 @@ export function restAndHeal(world: World, team: Team): void {
     healed += heal;
   }
 
+  const hearth = atHearth(world, team);
+
   if (healed === 0 && canCamp(world, team)) {
+    const rate = hearth ? 0.05 : 0.02;
     for (const hero of crew) {
       const missing = hero.hpMax - hero.hp;
       if (missing <= 0) continue;
-      hero.hp += Math.min(missing, Math.max(1, Math.round(hero.hpMax * 0.02)));
+      hero.hp += Math.min(missing, Math.max(1, Math.round(hero.hpMax * rate)));
     }
-    if (world.tick % RATION_BURN_EVERY === 0) team.morale = clamp(0, 100, team.morale + 1);
+    if (world.tick % CAMP_BURN_EVERY === 0) {
+      if (!hearth) team.rations = Math.max(0, team.rations - 1);
+      team.morale = clamp(0, 100, team.morale + 1);
+    }
   }
 
-  if (world.tick % RATION_BURN_EVERY === 0) team.rations = Math.max(0, team.rations - 1);
-  team.morale = clamp(0, 100, team.morale + 2);
+  if (!hearth && world.tick % RATION_BURN_EVERY === 0) team.rations = Math.max(0, team.rations - 1);
+  team.morale = clamp(0, 100, team.morale + (hearth ? 3 : 2));
 
   if (cost > 0 && world.tick % 20 === 0) {
     emit(world, { type: 'REST', teamId: team.id, floorId: team.floorId, payload: { cp: cost, team: team.name } });
   }
+}
+
+export const RATION_CAP = 60;
+
+export function atShop(world: World, team: Team): boolean {
+  const floor = floorOf(world, team.floorId);
+  return !!floor && floor.shopRoom >= 0 && floor.shopRoom === team.roomIdx;
+}
+
+export function rationPriceCp(world: World, depth: number): number {
+  return Math.max(1, Math.round(22 * priceIndex(circulatingCoin(world)) * (1 + 0.15 * (depth - 1))));
 }
 
 export function isDayBoundary(tick: number): boolean {

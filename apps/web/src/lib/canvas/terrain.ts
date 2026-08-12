@@ -6,6 +6,8 @@ export const TILE_FLOOR = 1;
 export const TILE_DOOR = 2;
 export const TILE_STAIRS = 3;
 export const TILE_RUBBLE = 4;
+export const TILE_HEARTH = 5;
+export const TILE_SHOP = 6;
 
 export const CACHE_TILE = 24;
 const ROCK_DEPTH = 3;
@@ -117,6 +119,38 @@ function paintFloorTile(ctx: CanvasRenderingContext2D, x: number, y: number, til
     for (let s = 1; s < 4; s++) {
       ctx.fillRect(px + 2, py + (CACHE_TILE / 4) * s, CACHE_TILE - 4, 1.5);
     }
+    return;
+  }
+
+  if (tile === TILE_SHOP) {
+    ctx.fillStyle = 'rgba(38, 30, 22, 0.9)';
+    ctx.fillRect(px + 2, py + CACHE_TILE * 0.5, CACHE_TILE - 4, CACHE_TILE * 0.42);
+    ctx.fillStyle = 'rgba(120, 176, 156, 0.92)';
+    for (let s = 0; s < 3; s++) {
+      ctx.fillRect(px + 2 + s * ((CACHE_TILE - 4) / 3), py + CACHE_TILE * 0.26, (CACHE_TILE - 6) / 3, CACHE_TILE * 0.2);
+    }
+    ctx.fillStyle = 'rgba(226, 208, 168, 0.85)';
+    ctx.fillRect(px + 2, py + CACHE_TILE * 0.46, CACHE_TILE - 4, 2);
+    return;
+  }
+
+  if (tile === TILE_HEARTH) {
+    ctx.fillStyle = 'rgba(28, 20, 14, 0.85)';
+    ctx.fillRect(px + 2, py + CACHE_TILE * 0.55, CACHE_TILE - 4, CACHE_TILE * 0.4);
+    ctx.fillStyle = 'rgba(228, 118, 42, 0.9)';
+    ctx.beginPath();
+    ctx.moveTo(px + CACHE_TILE / 2, py + CACHE_TILE * 0.18);
+    ctx.lineTo(px + CACHE_TILE * 0.78, py + CACHE_TILE * 0.66);
+    ctx.lineTo(px + CACHE_TILE * 0.22, py + CACHE_TILE * 0.66);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 214, 120, 0.95)';
+    ctx.beginPath();
+    ctx.moveTo(px + CACHE_TILE / 2, py + CACHE_TILE * 0.36);
+    ctx.lineTo(px + CACHE_TILE * 0.64, py + CACHE_TILE * 0.66);
+    ctx.lineTo(px + CACHE_TILE * 0.36, py + CACHE_TILE * 0.66);
+    ctx.closePath();
+    ctx.fill();
     return;
   }
 

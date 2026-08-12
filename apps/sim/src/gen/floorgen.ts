@@ -1,6 +1,43 @@
 import { RngDomain, mix32, rngFor, type Rng } from '@donjon/shared';
 import { buildApsp } from './apsp.js';
-import { TILE_DOOR, TILE_FLOOR, TILE_RUBBLE, TILE_STAIRS, TILE_WALL, isWalkable, type Floor, type Room } from '../engine/types.js';
+import {
+  TILE_DOOR,
+  TILE_FLOOR,
+  TILE_HEARTH,
+  TILE_RUBBLE,
+  TILE_SHOP,
+  TILE_STAIRS,
+  TILE_WALL,
+  isWalkable,
+  type Floor,
+  type Room,
+} from '../engine/types.js';
+
+const SHOP_NAMES = [
+  'Grellick’s Sundries',
+  'the Bonded Stall',
+  'the Licensed Pantry',
+  'Mother Tallow’s Counter',
+  'the Concession',
+  'the Rope and Biscuit',
+  'the Undermarket',
+  'Vess & Daughters',
+  'the Tithe Shop',
+  'the Deep Commissary',
+];
+
+const HEARTH_NAMES = [
+  'the Long Hearth',
+  'the Smoking Room',
+  'the Warm Cell',
+  'the Ash Pit',
+  'the Coalward',
+  'the Ember Hall',
+  'the Chimney Nook',
+  'the Banked Fire',
+  'the Kettle Room',
+  'the Last Warmth',
+];
 
 export const FLOOR_WIDTH = 60;
 export const FLOOR_HEIGHT = 40;
@@ -201,6 +238,44 @@ export function generateFloor(worldSeed: number, depth: number, tick: number): F
   const entry = rooms[entryRoom];
   if (entry) tiles[entry.cy * FLOOR_WIDTH + entry.cx] = TILE_DOOR;
 
+  let hearthRoom = entryRoom;
+  let hearthScore = -1;
+  for (let i = 0; i < rooms.length; i++) {
+    if (i === entryRoom || i === stairsRoom) continue;
+    const toEntry = apsp.dist[entryRoom * rooms.length + i] ?? 255;
+    const toStairs = apsp.dist[stairsRoom * rooms.length + i] ?? 255;
+    if (toEntry === 255 || toStairs === 255) continue;
+    const value = Math.min(toEntry, toStairs);
+    if (value > hearthScore) {
+      hearthScore = value;
+      hearthRoom = i;
+    }
+  }
+
+  const hearth = rooms[hearthRoom];
+  if (hearth && hearthRoom !== entryRoom) {
+    hearth.name = HEARTH_NAMES[depth % HEARTH_NAMES.length] ?? hearth.name;
+    tiles[hearth.cy * FLOOR_WIDTH + hearth.cx] = TILE_HEARTH;
+  }
+
+  let shopRoom = -1;
+  if (rng.chance(0.5)) {
+    const candidates: number[] = [];
+    for (let i = 0; i < rooms.length; i++) {
+      if (i === entryRoom || i === stairsRoom || i === hearthRoom) continue;
+      if ((apsp.dist[entryRoom * rooms.length + i] ?? 255) === 255) continue;
+      candidates.push(i);
+    }
+    if (candidates.length > 0) {
+      shopRoom = candidates[rng.int(0, candidates.length - 1)] ?? -1;
+      const shop = rooms[shopRoom];
+      if (shop) {
+        shop.name = SHOP_NAMES[depth % SHOP_NAMES.length] ?? shop.name;
+        tiles[shop.cy * FLOOR_WIDTH + shop.cx] = TILE_SHOP;
+      }
+    }
+  }
+
   for (let i = 0; i < rooms.length; i++) {
     const room = rooms[i];
     if (!room || !rng.chance(0.25)) continue;
@@ -222,6 +297,8 @@ export function generateFloor(worldSeed: number, depth: number, tick: number): F
     dist: apsp.dist,
     entryRoom,
     stairsRoom,
+    hearthRoom,
+    shopRoom,
     dangerCr: 1 + Math.round(1.3 * (depth - 1) * 10) / 10,
     generatedTick: tick,
   };

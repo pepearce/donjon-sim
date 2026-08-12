@@ -21,6 +21,7 @@ import {
   type Watch,
 } from '@donjon/shared';
 import { narrate, type LoadedPack } from '@donjon/content';
+import { EPOCH } from '../epoch.js';
 import { RARITY_NAMES, floorOf, heroById, itemsOf, roomTitle, roster, xpToNext } from '../engine/world.js';
 import type { Floor, Hero, World } from '../engine/types.js';
 
@@ -59,6 +60,8 @@ export function projectFloorMap(world: World, floorId: number): FloorMapDTO | nu
     })),
     entryRoom: floor.entryRoom,
     stairsRoom: floor.stairsRoom,
+    hearthRoom: floor.hearthRoom,
+    shopRoom: floor.shopRoom,
   };
 }
 
@@ -275,6 +278,10 @@ export function describeEvent(
       return `${STR(payload['name'])} against ${STR(payload['team'])} ${STR(payload['outcome']) === 'won' ? 'succeeded' : 'came to nothing'}`;
     case 'ROOM_LANDMARK':
       return `${STR(payload['room'])} is now called ${STR(payload['title'])} after ${NUM(payload['deaths'])} deaths`;
+    case 'SHOP_TRADE':
+      return payload['item']
+        ? `${STR(payload['team'])} bought ${STR(payload['item'])} at ${STR(payload['shop'])} for ${NUM(payload['cp'])}cp`
+        : `${STR(payload['team'])} bought ${NUM(payload['rations'])} rations at ${STR(payload['shop'])} for ${NUM(payload['cp'])}cp`;
     case 'RECORD_SET':
       return `${STR(payload['holder'])} of ${STR(payload['team'])} set a record: ${STR(payload['label'])} ${NUM(payload['value'])}`;
     case 'HERO_RETIRED':
@@ -482,6 +489,7 @@ export function projectMemorial(world: World, limit: number): MemorialEntryDTO[]
 export function projectSnapshot(world: World, seq: number, speed: number): SnapshotDTO {
   return {
     v: PROTOCOL_VERSION,
+    epoch: EPOCH,
     seq,
     tick: world.tick,
     ts: Date.now(),
