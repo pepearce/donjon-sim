@@ -445,6 +445,13 @@ function projectRecords(world: World): RecordRowDTO[] {
 export function projectKeeper(world: World): KeeperPublic {
   const d = world.dungeon;
   return {
+    name: '',
+    trait: '',
+    standing: 50,
+    rung: 'good',
+    overseer: false,
+    overseerName: '',
+    gambit: null,
     treasuryCp: Math.round(d.treasuryCp),
     loanCp: Math.round(d.loanCp),
     austerity: d.austerity,

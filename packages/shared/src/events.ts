@@ -49,6 +49,9 @@ export const EVENT_TYPES = [
   'HERO_SKIM',
   'STAFF_QUIT',
   'KHAN_FORECLOSURE',
+  'KEEPER_RUNG_CHANGED',
+  'KHAN_OVERSEER',
+  'KEEPER_GAMBIT',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -106,6 +109,9 @@ export const SEVERITY: Record<EventType, Severity> = {
   HERO_NEMESIS_SLAIN: 3,
   KEEPER_SCHEME_SET: 3,
   KEEPER_SCHEME_ENDED: 3,
+  KEEPER_RUNG_CHANGED: 3,
+  KHAN_OVERSEER: 3,
+  KEEPER_GAMBIT: 3,
 };
 
 export interface SimEvent {

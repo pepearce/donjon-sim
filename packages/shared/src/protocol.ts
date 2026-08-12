@@ -157,7 +157,21 @@ export interface RecordRowDTO {
   tick: number;
 }
 
+export interface KeeperGambitPublic {
+  stakeCp: number;
+  targetCp: number;
+  collectedCp: number;
+  daysLeft: number;
+}
+
 export interface KeeperPublic {
+  name: string;
+  trait: string;
+  standing: number;
+  rung: string;
+  overseer: boolean;
+  overseerName: string;
+  gambit: KeeperGambitPublic | null;
   treasuryCp: number;
   loanCp: number;
   austerity: boolean;
