@@ -1,6 +1,8 @@
 import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
+import { keeperLine } from '../keeperLines.js';
 import { SCHEME_NAMES } from '../tables.js';
+import { adjustKhanStanding, rungOf } from './standing.js';
 import { clamp, type KeeperScheme, type Team, type World } from '../types.js';
 
 const REVENUE_TARGET_CP = 9000;
@@ -47,11 +49,17 @@ export function resolveLoan(world: World): void {
     d.loanCp = LOAN_CP;
     d.treasuryCp += LOAN_CP;
     d.mintedCp += LOAN_CP;
-    emit(world, { type: 'KHAN_LOAN', payload: { cp: LOAN_CP, action: 'taken' } });
+    d.loanTakenTick = world.tick;
+    adjustKhanStanding(world, -5);
+    emit(world, {
+      type: 'KHAN_LOAN',
+      payload: { cp: LOAN_CP, action: 'taken', text: keeperLine(world, 'loan_taken') },
+    });
     return;
   }
 
   if (d.treasuryCp < 5_000 && d.loanCp > 0 && !d.austerity) {
+    if (rungOf(d.standing) === 'favored' && world.tick < d.loanTakenTick + DAY_TICKS) return;
     d.austerity = true;
     emit(world, {
       type: 'KEEPER_DECREE',
@@ -67,7 +75,11 @@ export function resolveLoan(world: World): void {
     d.loanCp -= pay;
     if (d.loanCp === 0) {
       d.austerity = false;
-      emit(world, { type: 'KHAN_LOAN', payload: { cp: pay, action: 'repaid' } });
+      adjustKhanStanding(world, 10);
+      emit(world, {
+        type: 'KHAN_LOAN',
+        payload: { cp: pay, action: 'repaid', text: keeperLine(world, 'loan_repaid') },
+      });
     }
   }
 }
@@ -141,6 +153,7 @@ export function maybeStartScheme(world: World): void {
 
 function endScheme(world: World, scheme: KeeperScheme, outcome: string): void {
   scheme.outcome = outcome;
+  adjustKhanStanding(world, outcome === 'won' ? 3 : -5);
   const target = schemeTarget(world);
   emit(world, {
     type: 'KEEPER_SCHEME_ENDED',

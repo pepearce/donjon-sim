@@ -1,7 +1,9 @@
 import { DAY_TICKS, RngDomain, applyBp, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
+import { keeperLine } from '../keeperLines.js';
 import { circulatingCoin, floorOf, monstersIn, roster } from '../world.js';
 import { adjustStanding, creditTollScheme } from './dungeon.js';
+import { rungOf, updateStandingDaily } from './standing.js';
 import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
 import { clamp, pushHistory, type Team, type World } from '../types.js';
@@ -115,6 +117,15 @@ function trackInsolvency(world: World): void {
   if (d.treasuryCp < INSOLVENT_TREASURY_CP && d.loanCp > 0) d.insolventDays += 1;
   else d.insolventDays = 0;
 
+  if (rungOf(d.standing) !== 'overseer') return;
+
+  if (d.insolventDays === FORECLOSE_DAYS - 1) {
+    emit(world, {
+      type: 'KEEPER_DECREE',
+      payload: { decree: 'foreclosure_imminent', text: keeperLine(world, 'foreclosure_imminent') },
+    });
+  }
+
   if (d.insolventDays >= FORECLOSE_DAYS && !world.foreclosed) {
     world.foreclosed = true;
     emit(world, {
@@ -142,6 +153,7 @@ export function dailyUpkeep(world: World): void {
   if (paid > 0) {
     emit(world, { type: 'WAGE_PAID', payload: { cp: paid, staff: world.monsters.filter((m) => m.alive).length } });
   }
+  updateStandingDaily(world, paid >= wages);
 
   const circulating = circulatingCoin(world);
   const index = priceIndex(circulating);

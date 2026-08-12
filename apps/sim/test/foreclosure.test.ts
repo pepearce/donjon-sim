@@ -45,6 +45,7 @@ describe('foreclosure', () => {
     world.dungeon.treasuryCp = 0;
     world.dungeon.loanCp = 25_000;
     world.dungeon.austerity = true;
+    world.dungeon.standing = 0;
 
     for (let day = 1; day <= FORECLOSE_DAYS; day++) {
       world.tick = day * DAY_TICKS;
