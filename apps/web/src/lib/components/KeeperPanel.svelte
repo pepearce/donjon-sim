@@ -39,6 +39,38 @@
   const treasuryPct = $derived(Math.min(100, Math.round(((sim.keeper?.treasuryCp ?? 0) / 150_000) * 100)));
   const loanPct = $derived(Math.min(100, Math.round(((sim.keeper?.loanCp ?? 0) / 25_000) * 100)));
 
+  const RUNG_LABEL: Record<string, string> = {
+    favored: 'FAVORED OF THE KHAN',
+    good: 'IN GOOD STANDING',
+    censured: 'CENSURED',
+    overseer: 'UNDER OVERSEER',
+  };
+
+  const rungTone = $derived(
+    sim.keeper?.rung === 'favored'
+      ? 'text-rank-gold'
+      : sim.keeper?.rung === 'censured'
+        ? 'text-torch-300'
+        : sim.keeper?.rung === 'overseer'
+          ? 'text-blood-300'
+          : 'text-parchment-300',
+  );
+
+  const rungBar = $derived(
+    sim.keeper?.rung === 'favored'
+      ? 'bg-rank-gold'
+      : sim.keeper?.rung === 'censured'
+        ? 'bg-torch-400'
+        : sim.keeper?.rung === 'overseer'
+          ? 'bg-blood-400'
+          : 'bg-parchment-300',
+  );
+
+  const gambit = $derived(sim.keeper?.gambit ?? null);
+  const gambitPct = $derived(
+    !gambit ? 0 : Math.max(0, Math.min(100, Math.round((gambit.collectedCp / Math.max(1, gambit.targetCp)) * 100))),
+  );
+
   const scheme = $derived(sim.keeper?.scheme ?? null);
 
   let anchorId = $state<number | null>(null);
@@ -130,14 +162,80 @@
 </script>
 
 <section class="flex h-full min-h-0 flex-col" aria-label="The Keeper">
-  <header class="flex shrink-0 items-baseline gap-2 border-b-2 border-ink-900 px-3 py-1.5">
-    <h2 class="font-display text-title leading-none text-parchment-200">THE KEEPER</h2>
+  <header class="shrink-0 border-b-2 border-ink-900 px-3 py-1.5">
+    <div class="flex items-baseline gap-2">
+      <h2 class="truncate font-display text-title leading-none text-parchment-200">
+        {sim.keeper?.name || 'THE KEEPER'}
+      </h2>
+      {#if sim.keeper?.trait}
+        <span class="shrink-0 rounded-xs border border-arcane-400 px-1 font-mono text-micro uppercase text-arcane-300">
+          {sim.keeper.trait}
+        </span>
+      {/if}
+      {#if sim.keeper}
+        <span class="ml-auto shrink-0 font-mono text-micro {moodTone}">{sim.keeper.mood.toUpperCase()}</span>
+      {/if}
+    </div>
     {#if sim.keeper}
-      <span class="ml-auto font-mono text-micro {moodTone}">{sim.keeper.mood.toUpperCase()}</span>
+      <div class="mt-1">
+        <div class="flex justify-between font-mono text-micro">
+          <span class={rungTone}>{RUNG_LABEL[sim.keeper.rung] ?? sim.keeper.rung.toUpperCase()}</span>
+          <span class="text-stone-500">{sim.keeper.standing}/100</span>
+        </div>
+        <div class="mt-0.5 h-1.5 overflow-hidden rounded-full bg-ink-900/60">
+          <div
+            class="h-full {rungBar} transition-[width] duration-300"
+            style="width: {sim.keeper.standing}%"
+            role="progressbar"
+            aria-valuenow={sim.keeper.standing}
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-label="Standing with the Khan"
+          ></div>
+        </div>
+      </div>
     {/if}
   </header>
 
   {#if sim.keeper}
+    {#if sim.keeper.overseer}
+      <p class="mx-2 mt-2 shrink-0 rounded-sm border-2 border-blood-500 bg-sev-3-wash px-2 py-1 font-mono text-micro text-blood-300">
+        {sim.keeper.overseerName ? sim.keeper.overseerName.toUpperCase() : 'THE KHAN’S OVERSEER'} PRESIDES —
+        TOLLS SKIMMED, DECREES SUSPENDED
+      </p>
+    {/if}
+
+    {#if gambit}
+      <article class="m-2 shrink-0 rounded-sm border-2 border-torch-400 bg-sev-2-wash shadow-ink-sm">
+        <header class="flex items-center gap-1.5 border-b-2 border-torch-400/60 px-2 py-1">
+          <span class="size-2 shrink-0 rounded-full bg-torch-400 animate-ember"></span>
+          <span class="font-mono text-micro text-torch-300">GAMBIT IN MOTION</span>
+          <span class="ml-auto shrink-0 font-mono text-micro text-stone-300">{gambit.daysLeft}d LEFT</span>
+        </header>
+        <div class="space-y-1.5 px-2 py-1.5">
+          <p class="text-body-sm text-stone-200">
+            {gambit.stakeCp.toLocaleString()}cp staked with the Khan — wring
+            {gambit.targetCp.toLocaleString()}cp of tolls before the window closes, double or nothing.
+          </p>
+          <div>
+            <div class="h-2 overflow-hidden rounded-full border border-ink-900/40 bg-ink-900/60">
+              <div
+                class="h-full bg-torch-400 transition-[width] duration-300"
+                style="width: {gambitPct}%"
+                role="progressbar"
+                aria-valuenow={gambitPct}
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="Gambit progress"
+              ></div>
+            </div>
+            <p class="mt-0.5 font-mono text-micro text-stone-400">
+              {gambit.collectedCp.toLocaleString()} of {gambit.targetCp.toLocaleString()}cp collected
+            </p>
+          </div>
+        </div>
+      </article>
+    {/if}
     {#if scheme}
       <article class="m-2 shrink-0 rounded-sm border-2 border-blood-500 bg-sev-3-wash shadow-ink-sm">
         <header class="flex items-center gap-1.5 border-b-2 border-blood-500/60 px-2 py-1">
