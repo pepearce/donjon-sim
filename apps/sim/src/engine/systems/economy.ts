@@ -110,11 +110,22 @@ export function dailyUpkeep(world: World): void {
   }
 }
 
+export const RATION_BURN_EVERY = 10;
+
+export function canCamp(world: World, team: Team): boolean {
+  if (team.rations <= 0) return false;
+  const floor = floorOf(world, team.floorId);
+  const room = floor?.rooms[team.roomIdx];
+  if (!room || room.state === 'stocked') return false;
+  return !world.monsters.some((m) => m.alive && m.floorId === team.floorId && m.roomId === room.id);
+}
+
 export function restAndHeal(world: World, team: Team): void {
   const circulating = circulatingCoin(world);
   const index = priceIndex(circulating);
   const crew = roster(world, team).filter((h) => h.state === 'ok');
   let cost = 0;
+  let healed = 0;
 
   for (const hero of crew) {
     const missing = hero.hpMax - hero.hp;
@@ -126,9 +137,19 @@ export function restAndHeal(world: World, team: Team): void {
     world.dungeon.sinkCp += price;
     hero.hp += heal;
     cost += price;
+    healed += heal;
   }
 
-  team.rations = Math.max(0, team.rations - 1);
+  if (healed === 0 && canCamp(world, team)) {
+    for (const hero of crew) {
+      const missing = hero.hpMax - hero.hp;
+      if (missing <= 0) continue;
+      hero.hp += Math.min(missing, Math.max(1, Math.round(hero.hpMax * 0.02)));
+    }
+    if (world.tick % RATION_BURN_EVERY === 0) team.morale = clamp(0, 100, team.morale + 1);
+  }
+
+  if (world.tick % RATION_BURN_EVERY === 0) team.rations = Math.max(0, team.rations - 1);
   team.morale = clamp(0, 100, team.morale + 2);
 
   if (cost > 0 && world.tick % 20 === 0) {

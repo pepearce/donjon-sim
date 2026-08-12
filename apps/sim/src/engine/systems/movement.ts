@@ -1,8 +1,10 @@
 import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { nextRoomTowards } from '../../gen/apsp.js';
-import { generateFloor, tilePath } from '../../gen/floorgen.js';
+import { generateFloor, roomSpot, tilePath } from '../../gen/floorgen.js';
 import { MAX_FLOORS, floorOf, livingRoster, monstersIn } from '../world.js';
+import { doctrineFor, roomNoise } from './doctrine.js';
+import { traitFrac } from './traits.js';
 import { resolveTrap } from './traps.js';
 import { scheduleRestock, stockFloor } from './restock.js';
 import { bankLoot, payEntryFee } from './economy.js';
@@ -11,29 +13,70 @@ import { setRecord } from './records.js';
 import { clamp, exploredKey, isWalkable, pushHistory, type Floor, type Team, type World } from '../types.js';
 import { markSeen } from '../fog.js';
 
+function rivalRooms(world: World, team: Team, floor: Floor): Set<number> {
+  const taken = new Set<number>();
+  for (const other of world.teams) {
+    if (other.id === team.id || other.state === 'disbanded') continue;
+    if (other.floorId !== floor.id) continue;
+    taken.add(other.roomIdx);
+    taken.add(other.targetRoom);
+  }
+  return taken;
+}
+
 export function chooseDestination(world: World, team: Team, floor: Floor): number {
-  const rng = rngFor(world.seed, world.tick, RngDomain.TEAM_AI, team.id);
+  const rng = rngFor(world.seed, world.tick, RngDomain.TEAM_DEST, team.id);
   const stocked = floor.rooms.filter((r) => r.state === 'stocked' && r.idx !== team.roomIdx);
 
   if (team.lastAction === 'DESCEND' || (stocked.length === 0 && floor.stairsRoom !== team.roomIdx)) {
     return floor.stairsRoom;
   }
-  if (stocked.length > 0) {
-    const reachable = stocked.filter((r) => (floor.dist[team.roomIdx * floor.rooms.length + r.idx] ?? 255) < 255);
-    const pool = reachable.length > 0 ? reachable : stocked;
-    const nearest = pool.reduce((best, r) => {
-      const dr = floor.dist[team.roomIdx * floor.rooms.length + r.idx] ?? 255;
-      const db = floor.dist[team.roomIdx * floor.rooms.length + best.idx] ?? 255;
-      return dr < db ? r : best;
-    }, pool[0]!);
-    return rng.chance(0.7) ? nearest.idx : rng.pick(pool).idx;
+  if (stocked.length === 0) return floor.stairsRoom;
+
+  const reachable = stocked.filter((r) => (floor.dist[team.roomIdx * floor.rooms.length + r.idx] ?? 255) < 255);
+  const pool = reachable.length > 0 ? reachable : stocked;
+
+  const doctrine = doctrineFor(world, team);
+  const bold = traitFrac(livingRoster(world, team), 'bold');
+  const effCaution = doctrine.caution * (1 + world.dungeon.aggressionMilli / 2000);
+  const dangerSign = bold > 0.5 ? -1 : 1;
+  const rivals = rivalRooms(world, team, floor);
+
+  const scored = pool.map((r) => {
+    const dist = floor.dist[team.roomIdx * floor.rooms.length + r.idx] ?? 255;
+    const value =
+      -2.5 * dist +
+      26 * doctrine.avarice * Math.log10(1 + r.lootCp / 100) -
+      dangerSign * 6 * effCaution * (r.trapTier + 0.8 * r.deaths) -
+      18 * (rivals.has(r.idx) ? 1 : 0) +
+      14 * doctrine.wanderlust * (team.explored.has(exploredKey(floor.id, r.idx)) ? 0 : 1) +
+      12 * roomNoise(world.seed, team.id, floor.id, r.idx);
+    return { idx: r.idx, value };
+  });
+
+  scored.sort((a, b) => b.value - a.value || a.idx - b.idx);
+  const top = scored.slice(0, 3);
+  if (top.length === 1) return top[0]!.idx;
+
+  const floorValue = top[top.length - 1]!.value;
+  const weights = top.map((c) => c.value - floorValue + 1);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let point = rng.float() * total;
+  for (let i = 0; i < top.length; i++) {
+    point -= weights[i] ?? 0;
+    if (point <= 0) return top[i]!.idx;
   }
-  return floor.stairsRoom;
+  return top[0]!.idx;
 }
 
 export function repath(world: World, team: Team, floor: Floor, destination: number): void {
   const step = nextRoomTowards(floor, floor.rooms.length, team.roomIdx, destination);
-  const path = tilePath(floor, team.roomIdx, step);
+  const here: [number, number] = [team.tileX, team.tileY];
+  const spot = roomSpot(floor, step, team.id, world.seed);
+  let path = tilePath(floor, team.roomIdx, step, here, spot);
+  if (step !== team.roomIdx && path.length === 0) {
+    path = tilePath(floor, team.roomIdx, step, here);
+  }
   if (step !== team.roomIdx && path.length === 0) {
     team.targetRoom = team.roomIdx;
     team.path = [];
@@ -107,8 +150,9 @@ export function descend(world: World, team: Team, floor: Floor): void {
   team.roomIdx = next.entryRoom;
   team.targetRoom = next.entryRoom;
   const entry = next.rooms[next.entryRoom];
-  team.tileX = entry?.cx ?? 1;
-  team.tileY = entry?.cy ?? 1;
+  const entrySpot = roomSpot(next, next.entryRoom, team.id, world.seed);
+  team.tileX = entry ? entrySpot[0] : 1;
+  team.tileY = entry ? entrySpot[1] : 1;
   team.path = [];
   team.pathPos = 0;
   team.trail.length = 0;
@@ -148,8 +192,9 @@ export function ascend(world: World, team: Team, floor: Floor): void {
   team.roomIdx = prev.stairsRoom;
   team.targetRoom = prev.stairsRoom;
   const room = prev.rooms[prev.stairsRoom];
-  team.tileX = room?.cx ?? 1;
-  team.tileY = room?.cy ?? 1;
+  const stairSpot = roomSpot(prev, prev.stairsRoom, team.id, world.seed);
+  team.tileX = room ? stairSpot[0] : 1;
+  team.tileY = room ? stairSpot[1] : 1;
   team.path = [];
   team.pathPos = 0;
   team.trail.length = 0;

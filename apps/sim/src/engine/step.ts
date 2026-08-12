@@ -17,6 +17,7 @@ import { decayRenown, rankTeams } from './systems/ranking.js';
 import { activeTeamCount, arrivals, formTeams, retireStragglers } from './systems/recruit.js';
 import { updateSurvivorRecord } from './systems/records.js';
 import { fleeGrudges } from './systems/relations.js';
+import { driftMorale } from './systems/doctrine.js';
 import { resolveRestock } from './systems/restock.js';
 import { armTrap } from './systems/traps.js';
 import { COMMIT_TICKS, chooseAction } from './systems/teamAi.js';
@@ -183,6 +184,7 @@ export function step(world: World): void {
   formTeams(world);
 
   if (world.tick % DECAY_EVERY === 0) {
+    driftMorale(world);
     decayRenown(world);
     rankTeams(world);
     updateFameAndNotoriety(world);

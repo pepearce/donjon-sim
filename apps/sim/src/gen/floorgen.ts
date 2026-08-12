@@ -1,4 +1,4 @@
-import { RngDomain, rngFor, type Rng } from '@donjon/shared';
+import { RngDomain, mix32, rngFor, type Rng } from '@donjon/shared';
 import { buildApsp } from './apsp.js';
 import { TILE_DOOR, TILE_FLOOR, TILE_RUBBLE, TILE_STAIRS, TILE_WALL, isWalkable, type Floor, type Room } from '../engine/types.js';
 
@@ -227,13 +227,32 @@ export function generateFloor(worldSeed: number, depth: number, tick: number): F
   };
 }
 
-export function tilePath(floor: Floor, from: number, to: number): Array<[number, number]> {
+export function roomSpot(floor: Floor, roomIdx: number, teamId: number, seed: number): [number, number] {
+  const room = floor.rooms[roomIdx];
+  if (!room) return [1, 1];
+  if (room.w <= 1 || room.h <= 1) return [room.cx, room.cy];
+
+  const h = mix32(seed ^ mix32(teamId * 0x9e3779b1 + floor.id * 0x85ebca6b + roomIdx * 0xc2b2ae35));
+  const x = room.x + (h % room.w);
+  const y = room.y + (((h / 65536) | 0) % room.h);
+  if (!isWalkable(floor, x, y)) return [room.cx, room.cy];
+  return [x, y];
+}
+
+export function tilePath(
+  floor: Floor,
+  from: number,
+  to: number,
+  fromSpot?: [number, number],
+  toSpot?: [number, number],
+): Array<[number, number]> {
+  if (from === to) return [];
   const a = floor.rooms[from];
   const b = floor.rooms[to];
   if (!a || !b) return [];
   const path: Array<[number, number]> = [];
-  let x = a.cx;
-  let y = a.cy;
+  let x = fromSpot?.[0] ?? a.cx;
+  let y = fromSpot?.[1] ?? a.cy;
   const horizontalFirst = corridorHorizontalFirst(from, to);
 
   const walkX = (tx: number): void => {
@@ -249,12 +268,20 @@ export function tilePath(floor: Floor, from: number, to: number): Array<[number,
     }
   };
 
+  walkX(a.cx);
+  walkY(a.cy);
+
   if (horizontalFirst) {
     walkX(b.cx);
     walkY(b.cy);
   } else {
     walkY(b.cy);
     walkX(b.cx);
+  }
+
+  if (toSpot) {
+    walkX(toSpot[0]);
+    walkY(toSpot[1]);
   }
 
   for (const [px, py] of path) {
