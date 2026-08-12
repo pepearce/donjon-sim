@@ -1,0 +1,26 @@
+{
+  "name": "donjon-sim",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "sim": "tsx apps/sim/src/main.ts",
+    "web": "npm -w @donjon/web run dev",
+    "check": "tsc --build && npm -w @donjon/web exec svelte-check -- --threshold error",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
+  }
+}

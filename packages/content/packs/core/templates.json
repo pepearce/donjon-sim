@@ -1,0 +1,1914 @@
+[
+  {
+    "id": "explored.00",
+    "type": "EXPLORED",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} {@move_verb|past} into {room}[, {@room_mood}]?0.35"
+  },
+  {
+    "id": "explored.01",
+    "type": "EXPLORED",
+    "weight": 8,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{room} received {team}[, {@room_mood}]?0.3"
+  },
+  {
+    "id": "explored.02",
+    "type": "EXPLORED",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} signed in at {room}"
+  },
+  {
+    "id": "explored.03",
+    "type": "EXPLORED",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "<3:Next|1:Then> came {room}, and {team} with it"
+  },
+  {
+    "id": "explored.04",
+    "type": "EXPLORED",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} found {room} {@room_mood}"
+  },
+  {
+    "id": "explored.fallback.00",
+    "type": "EXPLORED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "{team} entered {room}",
+    "fallback": true
+  },
+  {
+    "id": "combat_start.00",
+    "type": "COMBAT_START",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "lead",
+      "room"
+    ],
+    "text": "{team} met {lead|indef} in {room}"
+  },
+  {
+    "id": "combat_start.01",
+    "type": "COMBAT_START",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "lead"
+    ],
+    "text": "{lead|indef|cap} asked {team} for their permit"
+  },
+  {
+    "id": "combat_start.02",
+    "type": "COMBAT_START",
+    "weight": 7,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "The staff of {room} barred {team}"
+  },
+  {
+    "id": "combat_start.04",
+    "type": "COMBAT_START",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "lead",
+      "room"
+    ],
+    "text": "{lead|indef|cap} was waiting for {team} in {room}"
+  },
+  {
+    "id": "combat_start.05",
+    "type": "COMBAT_START",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "lead"
+    ],
+    "text": "{team} did not like the look of {lead|indef}"
+  },
+  {
+    "id": "combat_start.03",
+    "type": "COMBAT_START",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "lead"
+    ],
+    "text": "Negotiations opened between {team} and {lead|indef} [{@monster_bit}]?0.4"
+  },
+  {
+    "id": "combat_start.fallback.00",
+    "type": "COMBAT_START",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A fight broke out",
+    "fallback": true
+  },
+  {
+    "id": "combat_round.00",
+    "type": "COMBAT_ROUND",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "damage"
+    ],
+    "text": "{team} traded {damage|num} damage"
+  },
+  {
+    "id": "combat_round.01",
+    "type": "COMBAT_ROUND",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "damage"
+    ],
+    "text": "{damage|num} damage changed hands, mostly {team|poss}"
+  },
+  {
+    "id": "combat_round.02",
+    "type": "COMBAT_ROUND",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} kept at it"
+  },
+  {
+    "id": "combat_round.fallback.00",
+    "type": "COMBAT_ROUND",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The argument continued",
+    "fallback": true
+  },
+  {
+    "id": "monster_down.00",
+    "type": "MONSTER_DOWN",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{hero} {@kill_verb|past} {monster|indef}[ {@monster_bit}]?0.3"
+  },
+  {
+    "id": "monster_down.01",
+    "type": "MONSTER_DOWN",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{monster|indef|cap} was {@kill_verb|past} by {hero}"
+  },
+  {
+    "id": "monster_down.02",
+    "type": "MONSTER_DOWN",
+    "weight": 6,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "hero",
+      "monster",
+      "damage"
+    ],
+    "text": "{hero} put {damage|num} through {monster|indef} <and it stayed down|and it did not get up|and the shift ended>"
+  },
+  {
+    "id": "monster_down.03",
+    "type": "MONSTER_DOWN",
+    "weight": 5,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{monster|indef|cap} filed its <last|final|closing> report. {hero} did not read it"
+  },
+  {
+    "id": "monster_down.04",
+    "type": "MONSTER_DOWN",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{monster|indef|cap} {@monster_bit} was {@kill_verb|past} by {hero}"
+  },
+  {
+    "id": "monster_down.05",
+    "type": "MONSTER_DOWN",
+    "weight": 5,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{hero} {@hurt_verb|past} {monster|indef} until the contract lapsed"
+  },
+  {
+    "id": "monster_down.06",
+    "type": "MONSTER_DOWN",
+    "weight": 4,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "monster",
+      "hero"
+    ],
+    "text": "That was the end of {monster|indef}, courtesy of {hero}"
+  },
+  {
+    "id": "monster_down.fallback.00",
+    "type": "MONSTER_DOWN",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Something on the payroll stopped moving",
+    "fallback": true
+  },
+  {
+    "id": "hero_down.00",
+    "type": "HERO_DOWN",
+    "weight": 10,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "source"
+    ],
+    "text": "{hero} went down to {source|indef}"
+  },
+  {
+    "id": "hero_down.01",
+    "type": "HERO_DOWN",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "source"
+    ],
+    "text": "{source|indef|cap} {@hurt_verb|past} {hero} into the floor"
+  },
+  {
+    "id": "hero_down.02",
+    "type": "HERO_DOWN",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} stopped standing"
+  },
+  {
+    "id": "hero_down.fallback.00",
+    "type": "HERO_DOWN",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Someone went down",
+    "fallback": true
+  },
+  {
+    "id": "hero_death.00",
+    "type": "HERO_DEATH",
+    "weight": 10,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "className",
+      "level"
+    ],
+    "text": "{hero}, {level|ord} level {className}, died[. {@death_line}]?0.5"
+  },
+  {
+    "id": "hero_death.01",
+    "type": "HERO_DEATH",
+    "weight": 9,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} is now a line item[. {@death_line}]?0.4"
+  },
+  {
+    "id": "hero_death.02",
+    "type": "HERO_DEATH",
+    "weight": 8,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "species"
+    ],
+    "text": "The {species} called {hero} did not get up[. {@death_line}]?0.5"
+  },
+  {
+    "id": "hero_death.03",
+    "type": "HERO_DEATH",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} completed the delve, in the actuarial sense"
+  },
+  {
+    "id": "hero_death.fallback.00",
+    "type": "HERO_DEATH",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A hero died",
+    "fallback": true
+  },
+  {
+    "id": "team_wipe.00",
+    "type": "TEAM_WIPE",
+    "weight": 10,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "{team} was wiped out on floor {floor|num}"
+  },
+  {
+    "id": "team_wipe.01",
+    "type": "TEAM_WIPE",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} is dissolved, pending recovery of the deposit"
+  },
+  {
+    "id": "team_wipe.fallback.00",
+    "type": "TEAM_WIPE",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party was wiped out",
+    "fallback": true
+  },
+  {
+    "id": "loot_found.00",
+    "type": "LOOT_FOUND",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "coin"
+    ],
+    "text": "{team} took {coin|coin} of {@loot_adj} coin"
+  },
+  {
+    "id": "loot_found.01",
+    "type": "LOOT_FOUND",
+    "weight": 9,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "coin",
+      "room"
+    ],
+    "text": "{coin|coin} left {room} in {team|poss} pockets"
+  },
+  {
+    "id": "loot_found.02",
+    "type": "LOOT_FOUND",
+    "weight": 7,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "item"
+    ],
+    "text": "{team} pocketed {item|indef}"
+  },
+  {
+    "id": "loot_found.fallback.00",
+    "type": "LOOT_FOUND",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Loot changed hands",
+    "fallback": true
+  },
+  {
+    "id": "room_cleared.00",
+    "type": "ROOM_CLEARED",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} cleared {room}"
+  },
+  {
+    "id": "room_cleared.01",
+    "type": "ROOM_CLEARED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{room} is now vacant. {team} saw to it"
+  },
+  {
+    "id": "room_cleared.fallback.00",
+    "type": "ROOM_CLEARED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A room was cleared",
+    "fallback": true
+  },
+  {
+    "id": "trap_sprung.00",
+    "type": "TRAP_SPRUNG",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "trap",
+      "damage"
+    ],
+    "text": "{hero} found {trap} the hard way, {damage|num} damage"
+  },
+  {
+    "id": "trap_sprung.01",
+    "type": "TRAP_SPRUNG",
+    "weight": 8,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "trap"
+    ],
+    "text": "{trap|cap} did exactly what it was installed to do to {hero}"
+  },
+  {
+    "id": "trap_sprung.fallback.00",
+    "type": "TRAP_SPRUNG",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A trap went off",
+    "fallback": true
+  },
+  {
+    "id": "trap_disarmed.00",
+    "type": "TRAP_DISARMED",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero",
+      "trap"
+    ],
+    "text": "{hero} defused {trap}"
+  },
+  {
+    "id": "trap_disarmed.01",
+    "type": "TRAP_DISARMED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "trap"
+    ],
+    "text": "{hero} unscrewed {trap} and kept the screws"
+  },
+  {
+    "id": "trap_disarmed.fallback.00",
+    "type": "TRAP_DISARMED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A trap was disarmed",
+    "fallback": true
+  },
+  {
+    "id": "floor_descend.00",
+    "type": "FLOOR_DESCEND",
+    "weight": 10,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "{team} descended to {floor}"
+  },
+  {
+    "id": "floor_descend.01",
+    "type": "FLOOR_DESCEND",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "depth"
+    ],
+    "text": "{team} went down to level {depth|num}, where the rates are worse"
+  },
+  {
+    "id": "floor_descend.fallback.00",
+    "type": "FLOOR_DESCEND",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party went deeper",
+    "fallback": true
+  },
+  {
+    "id": "floor_ascend.00",
+    "type": "FLOOR_ASCEND",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "{team} climbed back up to {floor}"
+  },
+  {
+    "id": "floor_ascend.fallback.00",
+    "type": "FLOOR_ASCEND",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party climbed back up",
+    "fallback": true
+  },
+  {
+    "id": "hero_level_up.00",
+    "type": "HERO_LEVEL_UP",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero",
+      "level"
+    ],
+    "text": "{hero} reached level {level|num}"
+  },
+  {
+    "id": "hero_level_up.01",
+    "type": "HERO_LEVEL_UP",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "level"
+    ],
+    "text": "{hero} was promoted to level {level|num}, no pay rise"
+  },
+  {
+    "id": "hero_level_up.fallback.00",
+    "type": "HERO_LEVEL_UP",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Someone levelled up",
+    "fallback": true
+  },
+  {
+    "id": "team_formed.00",
+    "type": "TEAM_FORMED",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "motto"
+    ],
+    "text": "{team} formed. Their motto: {motto}"
+  },
+  {
+    "id": "team_formed.01",
+    "type": "TEAM_FORMED",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "size"
+    ],
+    "text": "{size|num} optimists incorporated as {team}"
+  },
+  {
+    "id": "team_formed.fallback.00",
+    "type": "TEAM_FORMED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A new party formed",
+    "fallback": true
+  },
+  {
+    "id": "team_disbanded.00",
+    "type": "TEAM_DISBANDED",
+    "weight": 10,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "reason"
+    ],
+    "text": "{team} disbanded: {reason}"
+  },
+  {
+    "id": "team_disbanded.fallback.00",
+    "type": "TEAM_DISBANDED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party disbanded",
+    "fallback": true
+  },
+  {
+    "id": "recruit.00",
+    "type": "RECRUIT",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "species",
+      "className"
+    ],
+    "text": "{hero}, {species|indef} {className}, signed the waiver"
+  },
+  {
+    "id": "recruit.01",
+    "type": "RECRUIT",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} arrived at the gate with ambitions"
+  },
+  {
+    "id": "recruit.fallback.00",
+    "type": "RECRUIT",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Someone new arrived",
+    "fallback": true
+  },
+  {
+    "id": "toll_paid.00",
+    "type": "TOLL_PAID",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "carriedCp",
+      "tollCp"
+    ],
+    "text": "{team} banked {carriedCp|coin}; the Keeper kept {tollCp|coin} [{@keeper_aside}]?0.4"
+  },
+  {
+    "id": "toll_paid.fallback.00",
+    "type": "TOLL_PAID",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Loot was banked and taxed",
+    "fallback": true
+  },
+  {
+    "id": "corpse_tax.00",
+    "type": "CORPSE_TAX_LEVIED",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "recoveredCp"
+    ],
+    "text": "The Keeper recovered {recoveredCp|coin} from {hero|poss} effects"
+  },
+  {
+    "id": "corpse_tax.01",
+    "type": "CORPSE_TAX_LEVIED",
+    "weight": 8,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "recoveredCp"
+    ],
+    "text": "{hero} paid the corpse tax: {recoveredCp|coin}"
+  },
+  {
+    "id": "corpse_tax.fallback.00",
+    "type": "CORPSE_TAX_LEVIED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The corpse tax was levied",
+    "fallback": true
+  },
+  {
+    "id": "keeper_decree.00",
+    "type": "KEEPER_DECREE",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "text"
+    ],
+    "text": "By order of the Keeper: {text} [{@keeper_aside}]?0.5"
+  },
+  {
+    "id": "keeper_decree.fallback.00",
+    "type": "KEEPER_DECREE",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The Keeper issued a decree",
+    "fallback": true
+  },
+  {
+    "id": "khan_loan.00",
+    "type": "KHAN_LOAN",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "cp",
+      "action"
+    ],
+    "text": "The Grand Khan's loan of {cp|coin} was {action}"
+  },
+  {
+    "id": "khan_loan.fallback.00",
+    "type": "KHAN_LOAN",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The Khan's ledger moved",
+    "fallback": true
+  },
+  {
+    "id": "wage_paid.00",
+    "type": "WAGE_PAID",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "cp",
+      "staff"
+    ],
+    "text": "{cp|coin} in wages went out to {staff|num} staff"
+  },
+  {
+    "id": "wage_paid.fallback.00",
+    "type": "WAGE_PAID",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "Wages were paid",
+    "fallback": true
+  },
+  {
+    "id": "entry_fee.00",
+    "type": "ENTRY_FEE_PAID",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "cp"
+    ],
+    "text": "{team} paid {cp|coin} at the door"
+  },
+  {
+    "id": "entry_fee.fallback.00",
+    "type": "ENTRY_FEE_PAID",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The entry fee was paid",
+    "fallback": true
+  },
+  {
+    "id": "party_exited.00",
+    "type": "PARTY_EXITED",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "depth"
+    ],
+    "text": "{team} walked out of floor {depth|num}, breathing"
+  },
+  {
+    "id": "party_exited.fallback.00",
+    "type": "PARTY_EXITED",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party left the dungeon",
+    "fallback": true
+  },
+  {
+    "id": "combat_end.00",
+    "type": "COMBAT_END",
+    "weight": 10,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} finished the argument"
+  },
+  {
+    "id": "combat_end.fallback.00",
+    "type": "COMBAT_END",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The fighting stopped",
+    "fallback": true
+  },
+  {
+    "id": "rest.00",
+    "type": "REST",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "cp"
+    ],
+    "text": "{team} rested, {cp|coin} of poultices and bad wine"
+  },
+  {
+    "id": "rest.fallback.00",
+    "type": "REST",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A party rested",
+    "fallback": true
+  },
+  {
+    "id": "restock.00",
+    "type": "DUNGEON_RESTOCK",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "room"
+    ],
+    "text": "{room} was restocked[ {@keeper_aside}]?0.4"
+  },
+  {
+    "id": "restock.fallback.00",
+    "type": "DUNGEON_RESTOCK",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "A room was restocked",
+    "fallback": true
+  },
+  {
+    "id": "world_init.00",
+    "type": "WORLD_INIT",
+    "weight": 10,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "floors",
+      "rooms"
+    ],
+    "text": "The dungeon opens for business: {floors|num} floors, {rooms|num} rooms, terms as posted"
+  },
+  {
+    "id": "world_init.fallback.00",
+    "type": "WORLD_INIT",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The dungeon opened",
+    "fallback": true
+  },
+  {
+    "id": "dormancy.00",
+    "type": "DUNGEON_DORMANCY",
+    "weight": 10,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "dormancyMs"
+    ],
+    "text": "The dungeon was shut for {dormancyMs|num} milliseconds. Nobody was refunded"
+  },
+  {
+    "id": "dormancy.fallback.00",
+    "type": "DUNGEON_DORMANCY",
+    "weight": 1,
+    "tone": [],
+    "requires": [],
+    "text": "The dungeon was dormant",
+    "fallback": true
+  },
+  {
+    "id": "explored.05",
+    "type": "EXPLORED",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} {@move_verb|past} through the doorway of {room}"
+  },
+  {
+    "id": "explored.06",
+    "type": "EXPLORED",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "Nothing greeted {team} in {room}[, which was {@room_mood}]?0.4"
+  },
+  {
+    "id": "explored.07",
+    "type": "EXPLORED",
+    "weight": 5,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{room}, {@room_mood}, admitted {team}"
+  },
+  {
+    "id": "explored.08",
+    "type": "EXPLORED",
+    "weight": 4,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} took stock of {room}"
+  },
+  {
+    "id": "explored.09",
+    "type": "EXPLORED",
+    "weight": 4,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} {@move_verb|past} into {room} as though invited"
+  },
+  {
+    "id": "explored.10",
+    "type": "EXPLORED",
+    "weight": 4,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "depth"
+    ],
+    "text": "{team} pressed on, {depth|ord} floor down"
+  },
+  {
+    "id": "explored.11",
+    "type": "EXPLORED",
+    "weight": 3,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{room} was empty. {team} did not relax"
+  },
+  {
+    "id": "combat_round.03",
+    "type": "COMBAT_ROUND",
+    "weight": 7,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "damage"
+    ],
+    "text": "Blows landed both ways: {damage|num} in total for {team}"
+  },
+  {
+    "id": "combat_round.04",
+    "type": "COMBAT_ROUND",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} continued the negotiation by other means"
+  },
+  {
+    "id": "combat_round.05",
+    "type": "COMBAT_ROUND",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "damage"
+    ],
+    "text": "{damage|num} more damage, and no end in sight for {team}"
+  },
+  {
+    "id": "combat_round.06",
+    "type": "COMBAT_ROUND",
+    "weight": 5,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} swung, missed, swore, swung again"
+  },
+  {
+    "id": "combat_round.07",
+    "type": "COMBAT_ROUND",
+    "weight": 5,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "damage"
+    ],
+    "text": "{team} pressed the attack for {damage|num}"
+  },
+  {
+    "id": "hero_down.03",
+    "type": "HERO_DOWN",
+    "weight": 7,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "source"
+    ],
+    "text": "{source|indef|cap} put {hero} on the flagstones"
+  },
+  {
+    "id": "hero_down.04",
+    "type": "HERO_DOWN",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} took an unscheduled break"
+  },
+  {
+    "id": "hero_down.05",
+    "type": "HERO_DOWN",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "source"
+    ],
+    "text": "{hero} folded under {source|indef}"
+  },
+  {
+    "id": "hero_down.06",
+    "type": "HERO_DOWN",
+    "weight": 5,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} sat down very suddenly and did not get up"
+  },
+  {
+    "id": "hero_death.04",
+    "type": "HERO_DEATH",
+    "weight": 7,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "level"
+    ],
+    "text": "{hero} died at level {level|num}[. {@death_line}]?0.5"
+  },
+  {
+    "id": "hero_death.05",
+    "type": "HERO_DEATH",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "className"
+    ],
+    "text": "The {className} {hero} was struck from the register"
+  },
+  {
+    "id": "hero_death.06",
+    "type": "HERO_DEATH",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} will not be coming back up[. {@death_line}]?0.45"
+  },
+  {
+    "id": "hero_death.07",
+    "type": "HERO_DEATH",
+    "weight": 5,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} discovered the exclusion clause"
+  },
+  {
+    "id": "loot_found.03",
+    "type": "LOOT_FOUND",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "coin"
+    ],
+    "text": "{team} came away {coin|coin} richer, before deductions"
+  },
+  {
+    "id": "loot_found.04",
+    "type": "LOOT_FOUND",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "coin",
+      "room"
+    ],
+    "text": "{room} gave up {coin|coin} to {team}"
+  },
+  {
+    "id": "loot_found.05",
+    "type": "LOOT_FOUND",
+    "weight": 6,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "team",
+      "item"
+    ],
+    "text": "{item|indef|cap} found its way into {team|poss} baggage"
+  },
+  {
+    "id": "loot_found.06",
+    "type": "LOOT_FOUND",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "coin"
+    ],
+    "text": "{team} counted {coin|coin} and thought about the cost"
+  },
+  {
+    "id": "monster_down.07",
+    "type": "MONSTER_DOWN",
+    "weight": 6,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{hero} {@kill_verb|past} {monster|indef}, who had not finished speaking"
+  },
+  {
+    "id": "monster_down.08",
+    "type": "MONSTER_DOWN",
+    "weight": 5,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{monster|indef|cap} fell to {hero}<|, eventually|, without ceremony>"
+  },
+  {
+    "id": "monster_down.09",
+    "type": "MONSTER_DOWN",
+    "weight": 5,
+    "tone": [
+      "dry"
+    ],
+    "requires": [
+      "hero",
+      "monster"
+    ],
+    "text": "{hero} <closed the file on|signed off on|marked paid> {monster|indef}"
+  },
+  {
+    "id": "room_cleared.02",
+    "type": "ROOM_CLEARED",
+    "weight": 7,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{room} belonged to {team} now"
+  },
+  {
+    "id": "room_cleared.03",
+    "type": "ROOM_CLEARED",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "{team} left {room} tidier than they found it, technically"
+  },
+  {
+    "id": "room_cleared.04",
+    "type": "ROOM_CLEARED",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "room"
+    ],
+    "text": "{room} went <quiet|still|unstaffed>"
+  },
+  {
+    "id": "combat_start.06",
+    "type": "COMBAT_START",
+    "weight": 6,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "team",
+      "lead"
+    ],
+    "text": "{lead|indef|cap} objected to {team} on procedural grounds"
+  },
+  {
+    "id": "combat_start.07",
+    "type": "COMBAT_START",
+    "weight": 5,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "room"
+    ],
+    "text": "Something in {room} had been waiting for {team}"
+  },
+  {
+    "id": "combat_end.01",
+    "type": "COMBAT_END",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} concluded proceedings"
+  },
+  {
+    "id": "combat_end.02",
+    "type": "COMBAT_END",
+    "weight": 7,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "The room <fell quiet|went still|emptied of noise> around {team}"
+  },
+  {
+    "id": "combat_end.03",
+    "type": "COMBAT_END",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} counted themselves"
+  },
+  {
+    "id": "trap_sprung.02",
+    "type": "TRAP_SPRUNG",
+    "weight": 7,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "hero",
+      "trap"
+    ],
+    "text": "{hero} triggered {trap} and learned something"
+  },
+  {
+    "id": "trap_sprung.03",
+    "type": "TRAP_SPRUNG",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "hero",
+      "damage"
+    ],
+    "text": "{hero} took {damage|num} from the floor itself"
+  },
+  {
+    "id": "trap_disarmed.02",
+    "type": "TRAP_DISARMED",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "trap"
+    ],
+    "text": "{hero} talked {trap} out of it"
+  },
+  {
+    "id": "trap_disarmed.03",
+    "type": "TRAP_DISARMED",
+    "weight": 5,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero",
+      "tier"
+    ],
+    "text": "{hero} made a tier {tier|num} mechanism safe"
+  },
+  {
+    "id": "floor_descend.02",
+    "type": "FLOOR_DESCEND",
+    "weight": 7,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "{team} took the stairs down into {floor}"
+  },
+  {
+    "id": "floor_descend.03",
+    "type": "FLOOR_DESCEND",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} descended, waiver countersigned"
+  },
+  {
+    "id": "floor_ascend.01",
+    "type": "FLOOR_ASCEND",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} decided upward was the better trade"
+  },
+  {
+    "id": "floor_ascend.02",
+    "type": "FLOOR_ASCEND",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "{team} surfaced in {floor}"
+  },
+  {
+    "id": "party_exited.01",
+    "type": "PARTY_EXITED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} left through the front door, which is rarer than you would think"
+  },
+  {
+    "id": "party_exited.02",
+    "type": "PARTY_EXITED",
+    "weight": 6,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "team",
+      "depth"
+    ],
+    "text": "{team} came up from floor {depth|num} intact"
+  },
+  {
+    "id": "rest.01",
+    "type": "REST",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} sat down, counted wounds, and paid for bandages"
+  },
+  {
+    "id": "rest.02",
+    "type": "REST",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} rested badly"
+  },
+  {
+    "id": "recruit.02",
+    "type": "RECRUIT",
+    "weight": 6,
+    "tone": [
+      "comic"
+    ],
+    "requires": [
+      "hero",
+      "className"
+    ],
+    "text": "Another {className} — {hero} — was talked into it"
+  },
+  {
+    "id": "recruit.03",
+    "type": "RECRUIT",
+    "weight": 5,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} asked about the pension scheme. There is none"
+  },
+  {
+    "id": "team_formed.02",
+    "type": "TEAM_FORMED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "Articles of association were filed for {team}"
+  },
+  {
+    "id": "team_formed.03",
+    "type": "TEAM_FORMED",
+    "weight": 6,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "team",
+      "motto"
+    ],
+    "text": "{team} took an oath: {motto}"
+  },
+  {
+    "id": "team_disbanded.01",
+    "type": "TEAM_DISBANDED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "reason"
+    ],
+    "text": "{team} wound up its affairs — {reason}"
+  },
+  {
+    "id": "team_disbanded.02",
+    "type": "TEAM_DISBANDED",
+    "weight": 6,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "{team} is no longer a going concern"
+  },
+  {
+    "id": "team_wipe.02",
+    "type": "TEAM_WIPE",
+    "weight": 7,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "team"
+    ],
+    "text": "Not one of {team} walked out"
+  },
+  {
+    "id": "team_wipe.03",
+    "type": "TEAM_WIPE",
+    "weight": 6,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "floor"
+    ],
+    "text": "Floor {floor|num} kept all of {team}"
+  },
+  {
+    "id": "hero_level_up.02",
+    "type": "HERO_LEVEL_UP",
+    "weight": 6,
+    "tone": [
+      "epic"
+    ],
+    "requires": [
+      "hero",
+      "level"
+    ],
+    "text": "{hero} is level {level|num} now, and insufferable"
+  },
+  {
+    "id": "hero_level_up.03",
+    "type": "HERO_LEVEL_UP",
+    "weight": 5,
+    "tone": [
+      "neutral"
+    ],
+    "requires": [
+      "hero"
+    ],
+    "text": "{hero} learned something worth keeping"
+  },
+  {
+    "id": "corpse_tax.02",
+    "type": "CORPSE_TAX_LEVIED",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "hero",
+      "recoveredCp"
+    ],
+    "text": "{recoveredCp|coin} was deducted from {hero} posthumously"
+  },
+  {
+    "id": "toll_paid.01",
+    "type": "TOLL_PAID",
+    "weight": 8,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "tollCp"
+    ],
+    "text": "{team} settled up. The Keeper took {tollCp|coin} [{@keeper_aside}]?0.4"
+  },
+  {
+    "id": "toll_paid.02",
+    "type": "TOLL_PAID",
+    "weight": 7,
+    "tone": [
+      "dry"
+    ],
+    "requires": [
+      "team",
+      "carriedCp"
+    ],
+    "text": "{carriedCp|coin} passed over the counting table for {team}"
+  },
+  {
+    "id": "keeper_decree.01",
+    "type": "KEEPER_DECREE",
+    "weight": 8,
+    "tone": [
+      "dry"
+    ],
+    "requires": [
+      "text"
+    ],
+    "text": "A notice went up: {text}"
+  },
+  {
+    "id": "keeper_decree.02",
+    "type": "KEEPER_DECREE",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "text"
+    ],
+    "text": "The Keeper has decided: {text} [{@keeper_aside}]?0.5"
+  },
+  {
+    "id": "restock.01",
+    "type": "DUNGEON_RESTOCK",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "room"
+    ],
+    "text": "New staff were assigned to {room}"
+  },
+  {
+    "id": "restock.02",
+    "type": "DUNGEON_RESTOCK",
+    "weight": 6,
+    "tone": [
+      "dry"
+    ],
+    "requires": [
+      "room"
+    ],
+    "text": "{room} reopened for business"
+  },
+  {
+    "id": "wage_paid.01",
+    "type": "WAGE_PAID",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "cp"
+    ],
+    "text": "Payroll ran: {cp|coin}, grudgingly"
+  },
+  {
+    "id": "entry_fee.01",
+    "type": "ENTRY_FEE_PAID",
+    "weight": 7,
+    "tone": [
+      "absurd"
+    ],
+    "requires": [
+      "team",
+      "cp"
+    ],
+    "text": "{cp|coin} from {team}, non-refundable"
+  },
+  {
+    "id": "khan_loan.01",
+    "type": "KHAN_LOAN",
+    "weight": 8,
+    "tone": [
+      "grim"
+    ],
+    "requires": [
+      "cp",
+      "action"
+    ],
+    "text": "The Khan's ledger moved: {cp|coin}, {action}"
+  }
+]

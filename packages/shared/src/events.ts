@@ -1,0 +1,89 @@
+export const EVENT_TYPES = [
+  'WORLD_INIT',
+  'EXPLORED',
+  'COMBAT_START',
+  'COMBAT_ROUND',
+  'COMBAT_END',
+  'MONSTER_DOWN',
+  'HERO_DOWN',
+  'HERO_DEATH',
+  'TEAM_WIPE',
+  'TRAP_SPRUNG',
+  'TRAP_DISARMED',
+  'LOOT_FOUND',
+  'REST',
+  'FLOOR_DESCEND',
+  'FLOOR_ASCEND',
+  'ROOM_CLEARED',
+  'PARTY_ENTERED',
+  'PARTY_EXITED',
+  'TEAM_FORMED',
+  'TEAM_DISBANDED',
+  'RECRUIT',
+  'HERO_LEVEL_UP',
+  'HERO_EPITHET_GAINED',
+  'HERO_RETIRED',
+  'ENTRY_FEE_PAID',
+  'TOLL_PAID',
+  'CORPSE_TAX_LEVIED',
+  'WAGE_PAID',
+  'GUARDIAN_HIRED',
+  'DUNGEON_RESTOCK',
+  'KEEPER_DECREE',
+  'KHAN_LOAN',
+  'RECORD_SET',
+  'DUNGEON_DORMANCY',
+] as const;
+
+export type EventType = (typeof EVENT_TYPES)[number];
+
+export type Severity = 0 | 1 | 2 | 3;
+
+export const SEVERITY: Record<EventType, Severity> = {
+  EXPLORED: 0,
+  COMBAT_ROUND: 0,
+  REST: 0,
+  TOLL_PAID: 0,
+  COMBAT_START: 1,
+  COMBAT_END: 1,
+  MONSTER_DOWN: 1,
+  LOOT_FOUND: 1,
+  TRAP_SPRUNG: 1,
+  ENTRY_FEE_PAID: 1,
+  WAGE_PAID: 1,
+  RECRUIT: 1,
+  DUNGEON_RESTOCK: 1,
+  HERO_DOWN: 2,
+  ROOM_CLEARED: 2,
+  FLOOR_DESCEND: 2,
+  FLOOR_ASCEND: 2,
+  HERO_LEVEL_UP: 2,
+  GUARDIAN_HIRED: 2,
+  CORPSE_TAX_LEVIED: 2,
+  PARTY_ENTERED: 2,
+  PARTY_EXITED: 2,
+  TRAP_DISARMED: 2,
+  HERO_EPITHET_GAINED: 2,
+  HERO_RETIRED: 2,
+  TEAM_DISBANDED: 2,
+  HERO_DEATH: 3,
+  TEAM_WIPE: 3,
+  TEAM_FORMED: 3,
+  KEEPER_DECREE: 3,
+  KHAN_LOAN: 3,
+  RECORD_SET: 3,
+  WORLD_INIT: 3,
+  DUNGEON_DORMANCY: 3,
+};
+
+export interface SimEvent {
+  id: number;
+  tick: number;
+  type: EventType;
+  severity: Severity;
+  teamId: number | null;
+  heroId: number | null;
+  floorId: number | null;
+  roomId: number | null;
+  payload: Record<string, string | number>;
+}

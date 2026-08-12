@@ -1,0 +1,11 @@
+{
+	"/": [
+		"src/routes/+page.server.ts"
+	],
+	"/api/control": [
+		"src/routes/api/control/+server.ts"
+	],
+	"/text": [
+		"src/routes/text/+page.server.ts"
+	]
+}

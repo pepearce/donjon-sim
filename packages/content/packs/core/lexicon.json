@@ -1,0 +1,89 @@
+{
+  "kill_verb": [
+    { "word": "cleave", "tags": ["blunt", "loud"] },
+    { "word": "skewer", "tags": ["sharp"] },
+    { "word": "flatten", "tags": ["blunt"] },
+    { "word": "unmake", "tags": ["arcane"] },
+    { "word": "dispatch", "tags": ["dry"] },
+    { "word": "invoice", "tags": ["dry", "absurd"] },
+    { "word": "retire", "tags": ["dry", "absurd"] },
+    { "word": "perforate", "tags": ["sharp"] },
+    { "word": "decommission", "tags": ["dry", "absurd"] },
+    { "word": "fold", "tags": ["blunt", "absurd"] },
+    { "word": "settle with", "tags": ["dry"] },
+    { "word": "conclude", "tags": ["dry"] },
+    { "word": "terminate", "tags": ["dry", "absurd"] },
+    { "word": "unstaff", "tags": ["absurd"] },
+    { "word": "write off", "tags": ["dry", "absurd"] },
+    { "word": "quiet", "tags": ["grim"] },
+    { "word": "undo", "tags": ["arcane"] },
+    { "word": "shelve", "tags": ["absurd"] },
+    { "word": "close out", "tags": ["dry"] },
+    { "word": "flatten out", "tags": ["blunt"] }
+  ],
+  "hurt_verb": [
+    { "word": "dent", "tags": ["blunt"] },
+    { "word": "nick", "tags": ["sharp"] },
+    { "word": "bruise", "tags": ["blunt"] },
+    { "word": "scorch", "tags": ["arcane"] },
+    { "word": "audit", "tags": ["dry", "absurd"] },
+    { "word": "inconvenience", "tags": ["dry", "absurd"] },
+    { "word": "rearrange", "tags": ["blunt", "absurd"] },
+    { "word": "wind", "tags": ["blunt"] }
+  ],
+  "move_verb": [
+    { "word": "shuffle", "tags": ["slow"] },
+    { "word": "troop", "tags": ["neutral"] },
+    { "word": "blunder", "tags": ["comic"] },
+    { "word": "creep", "tags": ["tense"] },
+    { "word": "file", "tags": ["dry", "absurd"] },
+    { "word": "wander", "tags": ["slow"] },
+    { "word": "press on", "tags": ["neutral"] },
+    { "word": "descend upon", "tags": ["epic"] }
+  ],
+  "room_mood": [
+    { "word": "reeking of old paperwork", "tags": ["absurd"] },
+    { "word": "lit by one resentful torch", "tags": ["grim"] },
+    { "word": "colder than the contract implied", "tags": ["absurd"] },
+    { "word": "carpeted in something regrettable", "tags": ["grim"] },
+    { "word": "quiet in an expensive way", "tags": ["tense"] },
+    { "word": "still smelling of the last party", "tags": ["grim", "absurd"] },
+    { "word": "under audit", "tags": ["absurd"] },
+    { "word": "damp to a professional standard", "tags": ["absurd"] }
+  ],
+  "death_line": [
+    { "word": "The paperwork was already filed", "tags": ["absurd"] },
+    { "word": "Nobody sang", "tags": ["grim"] },
+    { "word": "The Keeper noted the vacancy", "tags": ["absurd"] },
+    { "word": "It was, technically, covered", "tags": ["absurd"] },
+    { "word": "The floor drank it without comment", "tags": ["grim"] },
+    { "word": "Somewhere a ledger balanced", "tags": ["absurd"] }
+  ],
+  "loot_adj": [
+    { "word": "unclaimed", "tags": ["dry"] },
+    { "word": "still-warm", "tags": ["grim"] },
+    { "word": "suspiciously light", "tags": ["absurd"] },
+    { "word": "properly receipted", "tags": ["absurd"] },
+    { "word": "barely taxed", "tags": ["absurd"] },
+    { "word": "hard-won", "tags": ["epic"] }
+  ],
+  "keeper_aside": [
+    { "word": "as per the notice", "tags": ["absurd"] },
+    { "word": "effective immediately", "tags": ["dry"] },
+    { "word": "no appeals", "tags": ["dry"] },
+    { "word": "terms unchanged", "tags": ["absurd"] },
+    { "word": "see clause nine", "tags": ["absurd"] }
+  ],
+  "monster_bit": [
+    { "word": "on a short contract", "tags": ["absurd"] },
+    { "word": "paid weekly", "tags": ["absurd"] },
+    { "word": "three shifts deep", "tags": ["absurd"] },
+    { "word": "with no union", "tags": ["absurd"] },
+    { "word": "and its unpaid overtime", "tags": ["absurd"] },
+    { "word": "still on probation", "tags": ["absurd"] },
+    { "word": "two weeks from a pension", "tags": ["absurd"] },
+    { "word": "covering someone's shift", "tags": ["absurd"] },
+    { "word": "with a grievance pending", "tags": ["absurd"] },
+    { "word": "off the books entirely", "tags": ["dry"] }
+  ]
+}

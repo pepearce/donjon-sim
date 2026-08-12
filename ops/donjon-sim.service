@@ -1,0 +1,32 @@
+[Unit]
+Description=Donjon Sim — simulation engine and API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=donjon
+Group=donjon
+WorkingDirectory=/opt/donjon-sim
+Environment=NODE_ENV=production
+Environment=DONJON_DB=/var/lib/donjon/donjon.sqlite
+Environment=DONJON_PORT=8787
+Environment=DONJON_ADMIN_PORT=8788
+Environment=DONJON_SPEED=1
+EnvironmentFile=-/etc/donjon/sim.env
+ExecStart=/usr/bin/node --import tsx /opt/donjon-sim/apps/sim/src/main.ts
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=30
+StateDirectory=donjon
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/donjon
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

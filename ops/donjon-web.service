@@ -1,0 +1,27 @@
+[Unit]
+Description=Donjon Sim — SvelteKit dashboard
+After=network-online.target donjon-sim.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=donjon
+Group=donjon
+WorkingDirectory=/opt/donjon-sim/apps/web
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=DONJON_API=http://127.0.0.1:8787
+ExecStart=/usr/bin/node build/index.js
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
