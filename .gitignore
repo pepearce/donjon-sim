@@ -12,3 +12,5 @@ donjon.db*
 apps/web/build/
 apps/web/.svelte-kit/
 .playwright-mcp/
+/*.png
+*.probe.test.ts
