@@ -5,10 +5,12 @@ import { decodePath } from './codec.js';
 import { decodeFog } from '../engine/fog.js';
 import { newWorld } from '../engine/setup.js';
 import { generateFloor } from '../gen/floorgen.js';
+import { rollKeeperPersona } from '../engine/keeperPersona.js';
 import type {
   Hero,
   Item,
   KeeperActState,
+  KeeperGambit,
   KeeperScheme,
   Monster,
   RecordEntry,
@@ -328,7 +330,20 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         },
         records: parseArray<RecordEntry>(dungeonRow['records']),
         insolventDays: 0,
+        keeperName: String(dungeonRow['keeper_name'] ?? ''),
+        keeperTrait: String(dungeonRow['keeper_trait'] ?? ''),
+        standing: Number(dungeonRow['standing'] ?? 50),
+        overseerName: String(dungeonRow['overseer_name'] ?? ''),
+        gambit: parseObject<KeeperGambit>(dungeonRow['gambit']),
+        lastGambitEndedTick: Number(dungeonRow['last_gambit_ended_tick'] ?? 0),
+        loanTakenTick: Number(dungeonRow['loan_taken_tick'] ?? 0),
+        lastBigHaulTeamId: null,
       };
+      if (world.dungeon.keeperName === '') {
+        const persona = rollKeeperPersona(world.seed);
+        world.dungeon.keeperName = persona.name;
+        world.dungeon.keeperTrait = persona.trait;
+      }
     }
 
     const wakeRows = db.prepare('SELECT due_tick, kind, entity_id FROM wakes ORDER BY due_tick, seq').all() as Array<{

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { MAX_ROSTER, RngDomain, rngFor, type Rng, type SimEvent } from '@donjon/shared';
 import { generateFloor } from '../gen/floorgen.js';
+import { rollKeeperPersona } from './keeperPersona.js';
 import { RingBuffer } from './ring.js';
 import { Scheduler } from './scheduler.js';
 import { CLASSES, GIVEN_NAMES, SPECIES, SURNAMES, TEAM_MOTTOS, TEAM_PREFIXES, TEAM_SUFFIXES, TRAITS } from './tables.js';
@@ -126,7 +127,8 @@ export function makeTeam(world: World, rng: Rng, roster: Hero[]): Team {
   return team;
 }
 
-function initialDungeon(): DungeonState {
+function initialDungeon(seed: number): DungeonState {
+  const persona = rollKeeperPersona(seed);
   return {
     treasuryCp: 120_000,
     loanCp: 0,
@@ -148,6 +150,14 @@ function initialDungeon(): DungeonState {
     keeperAct: { last: '', tick: 0, text: '', cooldowns: {} },
     records: [],
     insolventDays: 0,
+    keeperName: persona.name,
+    keeperTrait: persona.trait,
+    standing: 50,
+    overseerName: '',
+    gambit: null,
+    lastGambitEndedTick: 0,
+    loanTakenTick: 0,
+    lastBigHaulTeamId: null,
   };
 }
 
@@ -161,7 +171,7 @@ export function genesis(seed: number): World {
     monsters: [],
     items: [],
     tavern: [],
-    dungeon: initialDungeon(),
+    dungeon: initialDungeon(seed),
     scheduler: new Scheduler(),
     nextEventId: 1,
     nextHeroId: 1,

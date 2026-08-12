@@ -329,6 +329,22 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 7,
+  name: 'keeper-arc',
+  up(db) {
+    db.exec(`
+      ALTER TABLE dungeon ADD COLUMN standing INTEGER NOT NULL DEFAULT 50;
+      ALTER TABLE dungeon ADD COLUMN keeper_name TEXT NOT NULL DEFAULT '';
+      ALTER TABLE dungeon ADD COLUMN keeper_trait TEXT NOT NULL DEFAULT '';
+      ALTER TABLE dungeon ADD COLUMN overseer_name TEXT NOT NULL DEFAULT '';
+      ALTER TABLE dungeon ADD COLUMN gambit TEXT NOT NULL DEFAULT 'null';
+      ALTER TABLE dungeon ADD COLUMN last_gambit_ended_tick INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE dungeon ADD COLUMN loan_taken_tick INTEGER NOT NULL DEFAULT 0;
+    `);
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;

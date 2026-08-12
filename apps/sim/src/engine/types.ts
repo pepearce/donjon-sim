@@ -187,6 +187,14 @@ export interface KeeperScheme {
   outcome: string;
 }
 
+export interface KeeperGambit {
+  stakeCp: number;
+  targetCp: number;
+  collectedCp: number;
+  startedTick: number;
+  endsTick: number;
+}
+
 export interface KeeperActState {
   last: string;
   tick: number;
@@ -224,6 +232,14 @@ export interface DungeonState {
   keeperAct: KeeperActState;
   records: RecordEntry[];
   insolventDays: number;
+  keeperName: string;
+  keeperTrait: string;
+  standing: number;
+  overseerName: string;
+  gambit: KeeperGambit | null;
+  lastGambitEndedTick: number;
+  loanTakenTick: number;
+  lastBigHaulTeamId: number | null;
 }
 
 export interface World {

@@ -99,11 +99,13 @@ export class Flusher {
         INSERT INTO dungeon (id, treasury_cp, loan_cp, austerity, aggression_milli,
           lethality_ema_milli, revenue_ema_cp, fame_milli, notoriety_milli, entry_fee_cp, toll_bp,
           corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, minted_cp, sink_cp,
-          scheme, keeper_act, records)
+          scheme, keeper_act, records, standing, keeper_name, keeper_trait, overseer_name,
+          gambit, last_gambit_ended_tick, loan_taken_tick)
         VALUES (1, @treasuryCp, @loanCp, @austerity, @aggressionMilli, @lethalityEmaMilli,
           @revenueEmaCp, @fameMilli, @notorietyMilli, @entryFeeCp, @tollBp, @corpseTaxBp,
           @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp, @scheme, @keeperAct,
-          @records)
+          @records, @standing, @keeperName, @keeperTrait, @overseerName, @gambit,
+          @lastGambitEndedTick, @loanTakenTick)
         ON CONFLICT(id) DO UPDATE SET
           treasury_cp = excluded.treasury_cp, loan_cp = excluded.loan_cp,
           austerity = excluded.austerity, aggression_milli = excluded.aggression_milli,
@@ -114,7 +116,11 @@ export class Flusher {
           keeper_mood = excluded.keeper_mood, heroes_slain = excluded.heroes_slain,
           corpse_yield_cp = excluded.corpse_yield_cp, minted_cp = excluded.minted_cp,
           sink_cp = excluded.sink_cp, scheme = excluded.scheme, keeper_act = excluded.keeper_act,
-          records = excluded.records
+          records = excluded.records, standing = excluded.standing,
+          keeper_name = excluded.keeper_name, keeper_trait = excluded.keeper_trait,
+          overseer_name = excluded.overseer_name, gambit = excluded.gambit,
+          last_gambit_ended_tick = excluded.last_gambit_ended_tick,
+          loan_taken_tick = excluded.loan_taken_tick
       `),
       clearTavern: db.prepare('DELETE FROM tavern'),
       tavern: db.prepare('INSERT INTO tavern (hero_id) VALUES (?)'),
@@ -300,6 +306,13 @@ export class Flusher {
         scheme: JSON.stringify(d.scheme ?? null),
         keeperAct: JSON.stringify(d.keeperAct ?? {}),
         records: JSON.stringify(d.records ?? []),
+        standing: Math.round(d.standing),
+        keeperName: d.keeperName,
+        keeperTrait: d.keeperTrait,
+        overseerName: d.overseerName,
+        gambit: JSON.stringify(d.gambit ?? null),
+        lastGambitEndedTick: d.lastGambitEndedTick,
+        loanTakenTick: d.loanTakenTick,
       });
 
       for (const event of world.pendingEvents) {
