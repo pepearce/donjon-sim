@@ -64,6 +64,9 @@
   function closeDrawer(): void {
     sim.drawerOpen = false;
     sim.selectedHero = null;
+    if (sim.selectedTeam !== null && !sim.teams.some((t) => t.id === sim.selectedTeam)) {
+      sim.selectedTeam = null;
+    }
   }
 
   async function jumpToRoster(e: MouseEvent): Promise<void> {
