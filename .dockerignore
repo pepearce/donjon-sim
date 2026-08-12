@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+apps/web/build
+apps/web/.svelte-kit
+*.tsbuildinfo
+donjon.db*
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.png
+.playwright-mcp
+.env

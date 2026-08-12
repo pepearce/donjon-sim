@@ -10,7 +10,7 @@ proxy buffers the event stream and the dashboard sits on a stale snapshot.
 sudo useradd --system --home /opt/donjon-sim donjon
 sudo mkdir -p /opt/donjon-sim /var/lib/donjon /etc/donjon
 sudo rsync -a --exclude node_modules ./ /opt/donjon-sim/
-cd /opt/donjon-sim && sudo -u donjon npm ci --omit=dev
+cd /opt/donjon-sim && sudo -u donjon npm ci
 sudo -u donjon npm -w @donjon/web run build
 
 sudo install -m0644 ops/donjon-sim.service ops/donjon-web.service /etc/systemd/system/

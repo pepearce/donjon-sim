@@ -1,6 +1,9 @@
-donjon.example.com {
-	encode gzip
+{
+	auto_https off
+	admin off
+}
 
+:8080 {
 	@sse path /api/v1/stream
 	handle @sse {
 		reverse_proxy 127.0.0.1:8787 {
@@ -15,7 +18,12 @@ donjon.example.com {
 		reverse_proxy 127.0.0.1:8787
 	}
 
+	handle /healthz {
+		reverse_proxy 127.0.0.1:8787
+	}
+
 	handle {
+		encode gzip
 		reverse_proxy 127.0.0.1:3000
 	}
 
