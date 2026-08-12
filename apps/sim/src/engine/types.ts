@@ -17,6 +17,16 @@ export const TILE_DOOR = 2;
 export const TILE_STAIRS = 3;
 export const TILE_RUBBLE = 4;
 
+export function isWalkable(
+  floor: { width: number; height: number; tiles: Uint8Array },
+  x: number,
+  y: number,
+): boolean {
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return false;
+  if (x < 0 || y < 0 || x >= floor.width || y >= floor.height) return false;
+  return (floor.tiles[y * floor.width + x] ?? TILE_WALL) !== TILE_WALL;
+}
+
 export interface Stats {
   str: number;
   agi: number;
@@ -57,6 +67,11 @@ export interface Hero {
   diedWallMs: number | null;
   goldCp: number;
   items: number[];
+  traits: string[];
+  epithet: string;
+  nemesisName: string;
+  nemesisDowns: number;
+  relations: Array<{ id: number; v: number }>;
 }
 
 export interface Monster {
@@ -148,10 +163,33 @@ export interface Team {
   explored: Set<string>;
   exploredTiles: Map<number, Uint8Array>;
   trail: Array<[number, number]>;
+  history: Array<{ t: number; k: string; s: string }>;
+  standing: number;
 }
 
 export function exploredKey(floorId: number, roomIdx: number): string {
   return `${floorId}:${roomIdx}`;
+}
+
+export interface KeeperScheme {
+  id: number;
+  kind: string;
+  targetTeamId: number;
+  name: string;
+  goal: number;
+  progress: number;
+  startedTick: number;
+  deadlineTick: number;
+  outcome: string;
+}
+
+export interface RecordEntry {
+  kind: string;
+  label: string;
+  value: number;
+  holder: string;
+  teamName: string;
+  tick: number;
 }
 
 export interface DungeonState {
@@ -171,6 +209,8 @@ export interface DungeonState {
   corpseYieldCp: number;
   mintedCp: number;
   sinkCp: number;
+  scheme: KeeperScheme | null;
+  records: RecordEntry[];
 }
 
 export interface World {
@@ -189,6 +229,7 @@ export interface World {
   nextTeamId: number;
   nextMonsterId: number;
   nextItemId: number;
+  nextSchemeId: number;
   initialCoinCp: number;
   pendingEvents: SimEvent[];
   tailRing: RingBuffer<SimEvent>;
@@ -208,3 +249,48 @@ export function xpToNext(level: number): number {
 
 export const MAX_LEVEL = 20;
 export const BLEED_OUT_TICKS = 8;
+export const MAX_TRAITS = 2;
+export const MAX_RELATIONS = 6;
+export const MAX_HISTORY = 20;
+
+export function addRelation(hero: Hero, otherId: number, delta: number): number {
+  const existing = hero.relations.find((r) => r.id === otherId);
+  if (existing) {
+    existing.v = clamp(-100, 100, existing.v + delta);
+    return existing.v;
+  }
+  const v = clamp(-100, 100, delta);
+  hero.relations.push({ id: otherId, v });
+  hero.relations.sort((a, b) => a.id - b.id);
+  while (hero.relations.length > MAX_RELATIONS) {
+    let worst = 0;
+    for (let i = 1; i < hero.relations.length; i++) {
+      const cur = hero.relations[i];
+      const best = hero.relations[worst];
+      if (!cur || !best) continue;
+      if (Math.abs(cur.v) < Math.abs(best.v)) worst = i;
+    }
+    hero.relations.splice(worst, 1);
+  }
+  return v;
+}
+
+export function relationTo(hero: Hero, otherId: number): number {
+  for (const r of hero.relations) {
+    if (r.id === otherId) return r.v;
+  }
+  return 0;
+}
+
+export function pushHistory(team: Team, tick: number, kind: string, sentence: string): void {
+  team.history.push({ t: tick, k: kind, s: sentence });
+  while (team.history.length > MAX_HISTORY) team.history.shift();
+}
+
+export function roomTitle(room: Room): string {
+  if (room.deaths >= 8) return 'the Abattoir';
+  if (room.deaths >= 5) return "the Butcher's Rest";
+  if (room.deaths >= 3) return 'the Unlucky';
+  if (room.visits >= 40 && room.deaths === 0) return 'the Well-Trodden';
+  return '';
+}

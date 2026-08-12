@@ -1,5 +1,6 @@
 import { RngDomain, rngFor } from '@donjon/shared';
 import { floorOf, livingRoster, monstersIn, roster } from '../world.js';
+import { traitFrac } from './traits.js';
 import { clamp, type Floor, type Team, type World } from '../types.js';
 
 export type Action = 'EXPLORE' | 'DESCEND' | 'LOOT' | 'REST' | 'RETREAT' | 'FLEE';
@@ -35,6 +36,10 @@ export interface AiContext {
   hasDeeperFloor: boolean;
   carriedCp: number;
   canAffordRest: boolean;
+  cravenFrac: number;
+  boldFrac: number;
+  gloryFrac: number;
+  cautiousFrac: number;
 }
 
 export function buildContext(world: World, team: Team, floor: Floor): AiContext {
@@ -53,7 +58,7 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     hpFrac: living.length > 0 ? hp / hpMax : 0,
     worstHpFrac: living.length > 0 ? worst : 0,
     morale: team.morale,
-    greed: team.greed,
+    greed: clamp(0, 1.6, team.greed + 0.25 * traitFrac(living, 'greedy') + 0.18 * traitFrac(living, 'hoarder')),
     rationsFrac: clamp(0, 1, team.rations / 40),
     depth: floor.depth,
     distToExit: floor.dist[team.roomIdx * floor.rooms.length + floor.entryRoom] ?? 10,
@@ -68,6 +73,10 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     hasDeeperFloor: floor.depth < 10,
     carriedCp: team.carriedCp,
     canAffordRest: team.goldCp >= 400,
+    cravenFrac: traitFrac(living, 'craven'),
+    boldFrac: traitFrac(living, 'bold'),
+    gloryFrac: traitFrac(living, 'glory_hound'),
+    cautiousFrac: traitFrac(living, 'cautious'),
   };
 }
 
@@ -81,7 +90,8 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
     25 * (1 - ctx.rationsFrac) +
     10 * ctx.greed -
     30 * downed -
-    45 * (1 - ctx.unclearedFrac);
+    45 * (1 - ctx.unclearedFrac) -
+    8 * ctx.cautiousFrac;
 
   const descend = ctx.hasDeeperFloor
     ? 20 +
@@ -90,7 +100,8 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
       15 * ctx.greed -
       30 * (1 - ctx.rationsFrac) -
       40 * downed +
-      25 * Math.min(1, ticksSinceDeepest / 7200)
+      25 * Math.min(1, ticksSinceDeepest / 7200) +
+      22 * ctx.gloryFrac
     : -1e6;
 
   const loot = 15 + 55 * ctx.greed + 20 * Math.log10(1 + ctx.roomLootCp / 100) - 100 * (ctx.inCombat ? 1 : 0);
@@ -111,10 +122,17 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
     0.6 * Math.sqrt(ctx.carriedCp) +
     35 * (ctx.rationsFrac <= 0.15 ? 1 : 0) +
     25 * downed -
-    0.8 * ctx.distToExit;
+    0.8 * ctx.distToExit +
+    14 * ctx.cravenFrac -
+    12 * ctx.boldFrac;
 
   const flee = ctx.inCombat
-    ? 55 + 160 * (1 - ctx.hpFrac) + 1.2 * (45 - ctx.morale) + 80 * Math.max(0, ctx.threatRatio - 1)
+    ? 55 +
+      160 * (1 - ctx.hpFrac) +
+      1.2 * (45 - ctx.morale) +
+      80 * Math.max(0, ctx.threatRatio - 1) +
+      20 * ctx.cravenFrac -
+      18 * ctx.boldFrac
     : -1e6;
 
   return { EXPLORE: explore, DESCEND: descend, LOOT: loot, REST: rest, RETREAT: retreat, FLEE: flee };

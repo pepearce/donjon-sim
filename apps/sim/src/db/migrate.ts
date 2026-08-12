@@ -299,6 +299,28 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 5,
+  name: 'saga-state',
+  up(db) {
+    db.exec(`
+      ALTER TABLE heroes ADD COLUMN traits TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE heroes ADD COLUMN epithet TEXT NOT NULL DEFAULT '';
+      ALTER TABLE heroes ADD COLUMN nemesis_name TEXT NOT NULL DEFAULT '';
+      ALTER TABLE heroes ADD COLUMN nemesis_downs INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE heroes ADD COLUMN relations TEXT NOT NULL DEFAULT '[]';
+
+      ALTER TABLE teams ADD COLUMN history TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE teams ADD COLUMN standing INTEGER NOT NULL DEFAULT 0;
+
+      ALTER TABLE dungeon ADD COLUMN scheme TEXT NOT NULL DEFAULT 'null';
+      ALTER TABLE dungeon ADD COLUMN records TEXT NOT NULL DEFAULT '[]';
+
+      ALTER TABLE world ADD COLUMN next_scheme_id INTEGER NOT NULL DEFAULT 1;
+    `);
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;

@@ -3,6 +3,7 @@
   import type { FloorMapDTO } from '@donjon/shared';
   import { MapRenderer } from '../canvas/renderer.js';
   import { interpolate } from '../applyFrame.js';
+  import { followFloor } from '../floorview.js';
   import { useMotion, useSim } from '../store.svelte.js';
   import FloorSelector from './FloorSelector.svelte';
 
@@ -29,6 +30,8 @@
   let renderer: MapRenderer | null = $state(null);
   let frameMs = $state(0);
   let loadedFloor = $state(0);
+  let loadRequest = $state(0);
+  let followedFloor = $state<number | null>(null);
 
   const mapCache = new Map<number, FloorMapDTO>();
 
@@ -42,14 +45,18 @@
     }
     try {
       const res = await fetch(`/api/v1/floors/${id}/map`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        loadRequest += 1;
+        return;
+      }
       const map = (await res.json()) as FloorMapDTO;
       if (mapCache.size > 5) mapCache.clear();
       mapCache.set(id, map);
+      if (id !== sim.selectedFloor) return;
       renderer.setMap(map);
       loadedFloor = id;
     } catch {
-      loadedFloor = 0;
+      loadRequest += 1;
     }
   }
 
@@ -75,7 +82,19 @@
 
   $effect(() => {
     const id = sim.selectedFloor;
+    void loadRequest;
     if (renderer && id !== loadedFloor) void loadFloor(id);
+  });
+
+  $effect(() => {
+    const target = followFloor(sim.selectedTeam, sim.tokens, followedFloor);
+    if (sim.selectedTeam === null) {
+      followedFloor = null;
+      return;
+    }
+    if (target === null) return;
+    followedFloor = target;
+    sim.selectedFloor = target;
   });
 
   $effect(() => {
@@ -117,17 +136,14 @@
 
   $effect(() => {
     if (!renderer) return;
-    const tokens = sim.tokensOnFloor;
-    renderer.setTokens(tokens);
+    renderer.setTokens(sim.tokens);
+    renderer.setMonsters(sim.monsters);
 
-    renderer.setMonsters(sim.monstersOnFloor);
-
-    const fogForFloor =
-      sim.fog === null ? null : new Set(sim.fog[String(sim.selectedFloor)] ?? []);
+    const fogForFloor = sim.fog === null ? null : new Set(sim.fog[String(loadedFloor)] ?? []);
     const team = sim.teams.find((t) => t.id === sim.selectedTeam);
     const sightForFloor =
-      fogForFloor && team && team.floorId === sim.selectedFloor ? new Set(sim.sight) : null;
-    renderer.setFog(fogForFloor, sightForFloor, sim.selectedTeam, decodeTiles(sim.selectedFloor));
+      fogForFloor && team && team.floorId === loadedFloor ? new Set(sim.sight) : null;
+    renderer.setFog(fogForFloor, sightForFloor, sim.selectedTeam, decodeTiles(loadedFloor));
 
     if (!motion) return;
     const reduced =
@@ -162,14 +178,14 @@
     return () => cancelAnimationFrame(raf);
   });
 
-  const floorInfo = $derived(sim.floors.find((f) => f.id === sim.selectedFloor));
+  const floorInfo = $derived(sim.floors.find((f) => f.id === loadedFloor));
 
   const mapSummary = $derived(
     floorInfo
       ? `${floorInfo.name}, floor ${floorInfo.depth}, ${floorInfo.roomCount} rooms. ` +
-          `${sim.tokensOnFloor.length} teams present: ` +
+          `${sim.tokens.filter((t) => t.floorId === loadedFloor).length} teams present: ` +
           (sim.teams
-            .filter((t) => t.floorId === sim.selectedFloor)
+            .filter((t) => t.floorId === loadedFloor)
             .map((t) => `${t.name} in ${t.roomName}`)
             .join('; ') || 'none')
       : 'Map loading.',

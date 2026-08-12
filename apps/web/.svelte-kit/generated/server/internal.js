@@ -26,7 +26,7 @@ export const options = {
 		app: ({ head, body, assets, nonce, env }) => "<!doctype html>\n<html lang=\"en\" class=\"h-full\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"description\" content=\"A live simulation of a for-profit dungeon.\" />\n    <title>Donjon Sim</title>\n    " + head + "\n  </head>\n  <body data-sveltekit-preload-data=\"hover\" class=\"h-full\">\n    <div class=\"h-full\">" + body + "</div>\n  </body>\n</html>\n",
 		error
 	},
-	version_hash: "pgw8nl"
+	version_hash: "1fd6mnr"
 };
 
 export async function get_hooks() {

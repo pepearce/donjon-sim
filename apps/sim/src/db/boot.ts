@@ -5,7 +5,17 @@ import { decodePath } from './codec.js';
 import { decodeFog } from '../engine/fog.js';
 import { newWorld } from '../engine/setup.js';
 import { generateFloor } from '../gen/floorgen.js';
-import type { Hero, Item, Monster, Stats, Team, TeamState, World } from '../engine/types.js';
+import type {
+  Hero,
+  Item,
+  KeeperScheme,
+  Monster,
+  RecordEntry,
+  Stats,
+  Team,
+  TeamState,
+  World,
+} from '../engine/types.js';
 import type { WakeKind } from '../engine/scheduler.js';
 
 export const SIM_VERSION = '0.4.0';
@@ -30,6 +40,7 @@ interface WorldRow {
   next_monster_id: number;
   next_item_id: number;
   initial_coin_cp: number;
+  next_scheme_id: number;
   last_flush_ms: number;
   dormancy_ms: number;
   status: string;
@@ -37,13 +48,34 @@ interface WorldRow {
   unclean_boots: number;
 }
 
+function parseArray<T>(raw: unknown): T[] {
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseObject<T>(raw: unknown): T | null {
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as T;
+  } catch {
+    return null;
+  }
+}
+
 function persistGenesis(db: Db, world: World, now: number): void {
   db.prepare(`
     INSERT INTO world (id, seed, lineage_id, tick, next_event_id, next_hero_id, next_team_id,
-      next_monster_id, next_item_id, initial_coin_cp, last_flush_ms, dormancy_ms, status,
-      sim_version, boot_count, unclean_boots)
+      next_monster_id, next_item_id, initial_coin_cp, next_scheme_id, last_flush_ms, dormancy_ms,
+      status, sim_version, boot_count, unclean_boots)
     VALUES (1, @seed, @lineageId, 0, @nextEventId, @nextHeroId, @nextTeamId, @nextMonsterId,
-      @nextItemId, @initialCoinCp, @now, 0, 'running', @simVersion, 1, 0)
+      @nextItemId, @initialCoinCp, @nextSchemeId, @now, 0, 'running', @simVersion, 1, 0)
   `).run({
     seed: world.seed,
     lineageId: randomUUID(),
@@ -53,6 +85,7 @@ function persistGenesis(db: Db, world: World, now: number): void {
     nextMonsterId: world.nextMonsterId,
     nextItemId: world.nextItemId,
     initialCoinCp: world.initialCoinCp,
+    nextSchemeId: world.nextSchemeId ?? 1,
     now,
     simVersion: SIM_VERSION,
   });
@@ -87,6 +120,7 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
   world.nextTeamId = row.next_team_id;
   world.nextMonsterId = row.next_monster_id;
   world.nextItemId = row.next_item_id;
+  world.nextSchemeId = row.next_scheme_id ?? 1;
   world.initialCoinCp = row.initial_coin_cp;
   world.pendingEvents.length = 0;
 
@@ -150,6 +184,8 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         explored: new Set<string>(JSON.parse(String(row2['explored'] ?? '[]')) as string[]),
         exploredTiles: decodeFog(String(row2['explored_tiles'] ?? '{}')),
         trail: [],
+        history: parseArray<{ t: number; k: string; s: string }>(row2['history']),
+        standing: Number(row2['standing'] ?? 0),
       };
       return team;
     });
@@ -178,6 +214,11 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         diedWallMs: h['died_wall_ms'] === null ? null : Number(h['died_wall_ms']),
         goldCp: Number(h['gold_cp']),
         items: [],
+        traits: parseArray<string>(h['traits']).filter((t) => typeof t === 'string'),
+        epithet: String(h['epithet'] ?? ''),
+        nemesisName: String(h['nemesis_name'] ?? ''),
+        nemesisDowns: Number(h['nemesis_downs'] ?? 0),
+        relations: parseArray<{ id: number; v: number }>(h['relations']).sort((a, b) => a.id - b.id),
       };
       return hero;
     });
@@ -255,6 +296,8 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         corpseYieldCp: Number(dungeonRow['corpse_yield_cp']),
         mintedCp: Number(dungeonRow['minted_cp']),
         sinkCp: Number(dungeonRow['sink_cp']),
+        scheme: parseObject<KeeperScheme>(dungeonRow['scheme']),
+        records: parseArray<RecordEntry>(dungeonRow['records']),
       };
     }
 

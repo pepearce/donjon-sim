@@ -6,7 +6,9 @@ import { MAX_FLOORS, floorOf, livingRoster, monstersIn } from '../world.js';
 import { resolveTrap } from './traps.js';
 import { scheduleRestock, stockFloor } from './restock.js';
 import { bankLoot, payEntryFee } from './economy.js';
-import { TILE_WALL, clamp, exploredKey, type Floor, type Team, type World } from '../types.js';
+import { awardEpithet } from './epithets.js';
+import { setRecord } from './records.js';
+import { clamp, exploredKey, isWalkable, pushHistory, type Floor, type Team, type World } from '../types.js';
 import { markSeen } from '../fog.js';
 
 export function chooseDestination(world: World, team: Team, floor: Floor): number {
@@ -31,8 +33,15 @@ export function chooseDestination(world: World, team: Team, floor: Floor): numbe
 
 export function repath(world: World, team: Team, floor: Floor, destination: number): void {
   const step = nextRoomTowards(floor, floor.rooms.length, team.roomIdx, destination);
+  const path = tilePath(floor, team.roomIdx, step);
+  if (step !== team.roomIdx && path.length === 0) {
+    team.targetRoom = team.roomIdx;
+    team.path = [];
+    team.pathPos = 0;
+    return;
+  }
   team.targetRoom = step;
-  team.path = tilePath(floor, team.roomIdx, step);
+  team.path = path;
   team.pathPos = 0;
 }
 
@@ -54,6 +63,13 @@ function onArrival(world: World, team: Team, floor: Floor): void {
   if (team.roomIdx === floor.entryRoom) {
     bankLoot(world, team);
     payEntryFee(world, team);
+    emit(world, {
+      type: 'PARTY_ENTERED',
+      teamId: team.id,
+      floorId: floor.id,
+      roomId: room.id,
+      payload: { team: team.name, depth: floor.depth, floor: floor.name, size: livingRoster(world, team).length },
+    });
   }
 
   resolveTrap(world, team, room);
@@ -107,6 +123,13 @@ export function descend(world: World, team: Team, floor: Floor): void {
     team.deepestFloor = nextDepth;
     team.lastDeepestTick = world.tick;
     team.renownMilli += 15 * nextDepth * 1000;
+    pushHistory(team, world.tick, 'descend', `${team.name} went down to floor ${nextDepth} for the first time.`);
+    setRecord(world, 'deepest', 'deepest floor reached', nextDepth, team.name, team);
+    if (nextDepth >= 4) {
+      for (const hero of livingRoster(world, team).sort((a, b) => a.id - b.id)) {
+        awardEpithet(world, hero, 'deep');
+      }
+    }
   }
 
   emit(world, {
@@ -147,8 +170,7 @@ export function advanceTeam(world: World, team: Team): void {
   const floor = floorOf(world, team.floorId);
   if (!floor) return;
 
-  const here = floor.tiles[team.tileY * floor.width + team.tileX];
-  if (here === undefined || here === TILE_WALL) {
+  if (!isWalkable(floor, team.tileX, team.tileY)) {
     const room = floor.rooms[team.roomIdx] ?? floor.rooms[floor.entryRoom];
     if (room) {
       team.tileX = room.cx;
@@ -186,6 +208,12 @@ export function advanceTeam(world: World, team: Team): void {
   const next = team.path[team.pathPos];
   if (!next) {
     team.pathPos = team.path.length;
+    return;
+  }
+  if (!isWalkable(floor, next[0], next[1])) {
+    team.path = [];
+    team.pathPos = 0;
+    team.targetRoom = team.roomIdx;
     return;
   }
   team.tileX = next[0];

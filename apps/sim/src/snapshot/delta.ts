@@ -3,6 +3,7 @@ import { PROTOCOL_VERSION, TICK_MS, type FrameDTO, type MoveLeg, type Op, type S
 export interface FrameContext {
   seq: number;
   from: number;
+  fromTick: number;
   speed: number;
 }
 
@@ -90,7 +91,7 @@ export function buildFrame(prev: SnapshotDTO, next: SnapshotDTO, ctx: FrameConte
       continue;
     }
 
-    const span = Math.max(1, next.tick - ctx.from);
+    const span = Math.max(1, next.tick - ctx.fromTick);
     const legCount = walked.length - 1;
     const legs: MoveLeg[] = [];
     for (let i = 0; i < legCount; i++) {
@@ -102,8 +103,8 @@ export function buildFrame(prev: SnapshotDTO, next: SnapshotDTO, ctx: FrameConte
         a[1],
         b[0],
         b[1],
-        ctx.from + (span * i) / legCount,
-        ctx.from + (span * (i + 1)) / legCount,
+        ctx.fromTick + (span * i) / legCount,
+        ctx.fromTick + (span * (i + 1)) / legCount,
       ]);
     }
     if (legs.length === 0) continue;

@@ -89,7 +89,7 @@ describe('delta protocol', () => {
       const from = seq;
       seq += 1;
       const next = projectSnapshot(world, seq, 1);
-      const frame = buildFrame(previous, next, { seq, from, speed: 1 });
+      const frame = buildFrame(previous, next, { seq, from, fromTick: previous.tick, speed: 1 });
 
       expect(opsAreOrdered([...frame.ops].sort((a, b) => OP_PHASE_ORDER[a.o] - OP_PHASE_ORDER[b.o]))).toBe(true);
 
@@ -119,7 +119,7 @@ describe('delta protocol', () => {
     const a = projectSnapshot(world, 1, 1);
     for (let i = 0; i < 2; i++) step(world);
     const b = projectSnapshot(world, 2, 1);
-    const frame = buildFrame(a, b, { seq: 2, from: 1, speed: 1 });
+    const frame = buildFrame(a, b, { seq: 2, from: 1, fromTick: a.tick, speed: 1 });
 
     const once = applyToPlain(JSON.parse(JSON.stringify(a)) as SnapshotDTO, frame);
     const twice = applyToPlain(once, frame);
@@ -136,14 +136,14 @@ describe('delta protocol', () => {
       token.floorId = 2;
       token.x += 1;
     }
-    const frame = buildFrame(a, b, { seq: 2, from: 1, speed: 1 });
+    const frame = buildFrame(a, b, { seq: 2, from: 1, fromTick: a.tick, speed: 1 });
     expect(frame.ops.some((op) => op.o === 'warp')).toBe(true);
     expect(frame.ops.some((op) => op.o === 'mv')).toBe(false);
   });
 
   it('carries dt and tick in every frame, even an empty one', () => {
     const a = projectSnapshot(newWorld(0xd0f0a), 1, 4);
-    const frame = buildFrame(a, a, { seq: 2, from: 1, speed: 4 });
+    const frame = buildFrame(a, a, { seq: 2, from: 1, fromTick: a.tick, speed: 4 });
     expect(frame.ops).toEqual([]);
     expect(frame.dt).toBe(250);
     expect(frame.tick).toBe(a.tick);

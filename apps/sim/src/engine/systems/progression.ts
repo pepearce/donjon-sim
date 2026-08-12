@@ -1,5 +1,7 @@
 import { emit } from '../emit.js';
 import { livingRoster } from '../world.js';
+import { awardEpithet } from './epithets.js';
+import { gainTrait } from './traits.js';
 import { MAX_LEVEL, clamp, xpToNext, type Team, type World } from '../types.js';
 
 export function levelForXp(xp: number): number {
@@ -38,6 +40,10 @@ export function awardXp(world: World, team: Team, monsterXp: number): void {
         floorId: team.floorId,
         payload: { hero: hero.name, level: hero.level },
       });
+      if (hero.level >= 5) {
+        gainTrait(world, hero);
+        awardEpithet(world, hero, 'level5');
+      }
     }
   }
 }

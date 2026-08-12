@@ -1,7 +1,13 @@
 import { DAY_TICKS, applyBp } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { circulatingCoin, floorOf, roster } from '../world.js';
-import { clamp, type Team, type World } from '../types.js';
+import { adjustStanding, creditTollScheme } from './dungeon.js';
+import { awardEpithet } from './epithets.js';
+import { setRecord } from './records.js';
+import { clamp, pushHistory, type Team, type World } from '../types.js';
+
+const RICH_CP = 5000;
+const BIG_HAUL_CP = 2000;
 
 export const COIN_SETPOINT = 150_000;
 
@@ -19,6 +25,7 @@ export function payEntryFee(world: World, team: Team): void {
   team.goldCp -= paid;
   world.dungeon.treasuryCp += paid;
   if (paid > 0) {
+    adjustStanding(team, 2);
     emit(world, {
       type: 'ENTRY_FEE_PAID',
       teamId: team.id,
@@ -59,6 +66,19 @@ export function bankLoot(world: World, team: Team): void {
   const floor = floorOf(world, team.floorId);
   team.renownMilli += Math.round(25 * (floor?.depth ?? 1) * 1000);
   world.dungeon.fameMilli += Math.round(400 * Math.log10(1 + carried / 100) * 1000);
+
+  adjustStanding(team, 1);
+  creditTollScheme(world, toll);
+
+  for (const hero of [...crew].sort((a, b) => a.id - b.id)) {
+    if (hero.goldCp >= RICH_CP) awardEpithet(world, hero, 'rich');
+  }
+
+  if (carried >= BIG_HAUL_CP) {
+    pushHistory(team, world.tick, 'haul', `${team.name} hauled ${carried}cp up the stairs in one trip.`);
+  }
+  setRecord(world, 'haul', 'largest single haul', carried, team.name, team);
+  setRecord(world, 'toll', 'largest single toll', toll, team.name, team);
 }
 
 export function dailyUpkeep(world: World): void {

@@ -1,6 +1,6 @@
 import { MAX_ROSTER } from '@donjon/shared';
 import { circulatingCoin } from './world.js';
-import { MAX_LEVEL, type World } from './types.js';
+import { MAX_HISTORY, MAX_LEVEL, MAX_RELATIONS, MAX_TRAITS, type World } from './types.js';
 import { levelForXp } from './systems/progression.js';
 import { MAX_TEAMS } from './world.js';
 
@@ -47,6 +47,19 @@ export function checkAll(world: World): Violation[] {
     for (const n of [hero.hp, hero.xp, hero.level, hero.goldCp]) {
       if (!Number.isFinite(n)) add('I22_NO_NAN', `hero ${hero.id} has a non-finite field`);
     }
+
+    if (hero.traits.length > MAX_TRAITS) add('I24_TRAIT_CAP', `hero ${hero.id} has ${hero.traits.length} traits`);
+    if (new Set(hero.traits).size !== hero.traits.length) add('I24_TRAIT_UNIQUE', `hero ${hero.id} has a duplicate trait`);
+    if (hero.relations.length > MAX_RELATIONS) {
+      add('I25_RELATION_CAP', `hero ${hero.id} has ${hero.relations.length} relations`);
+    }
+    let lastRelationId = -1;
+    for (const r of hero.relations) {
+      if (r.v < -100 || r.v > 100) add('I25_RELATION_BOUNDS', `hero ${hero.id} relation ${r.id} at ${r.v}`);
+      if (r.id === hero.id) add('I25_RELATION_SELF', `hero ${hero.id} has a relation with itself`);
+      if (r.id <= lastRelationId) add('I25_RELATION_SORTED', `hero ${hero.id} relations are out of order`);
+      lastRelationId = r.id;
+    }
   }
 
   const seenHeroes = new Set<number>();
@@ -58,6 +71,9 @@ export function checkAll(world: World): Violation[] {
       const hero = world.heroes.find((h) => h.id === id);
       if (hero && hero.teamId !== team.id) add('I3_ROSTER_LINK', `hero ${id} teamId mismatch`);
     }
+
+    if (team.standing < -100 || team.standing > 100) add('I26_STANDING_BOUNDS', `team ${team.id} standing ${team.standing}`);
+    if (team.history.length > MAX_HISTORY) add('I27_HISTORY_CAP', `team ${team.id} history ${team.history.length}`);
 
     if (team.goldCp < 0) add('I9_NO_NEGATIVE_MONEY', `team ${team.id} gold ${team.goldCp}`);
     if (team.carriedCp < 0) add('I9_NO_NEGATIVE_MONEY', `team ${team.id} carried ${team.carriedCp}`);
@@ -111,6 +127,14 @@ export function checkAll(world: World): Violation[] {
       `circulating ${circulating} + sink ${world.dungeon.sinkCp} != initial ${world.initialCoinCp} + minted ${world.dungeon.mintedCp}`,
     );
   }
+  const scheme = world.dungeon.scheme;
+  if (scheme) {
+    if (scheme.deadlineTick <= scheme.startedTick) {
+      add('I28_SCHEME_WINDOW', `scheme ${scheme.id} deadline ${scheme.deadlineTick} start ${scheme.startedTick}`);
+    }
+    if (scheme.startedTick > world.tick) add('I28_SCHEME_WINDOW', `scheme ${scheme.id} starts in the future`);
+  }
+
   if (world.dungeon.treasuryCp < 0) add('I9_NO_NEGATIVE_MONEY', `treasury ${world.dungeon.treasuryCp}`);
   if (world.dungeon.loanCp > 25_000) add('I20_LOAN_CAP', `loan ${world.dungeon.loanCp}`);
   if (world.dungeon.loanCp < 0) add('I20_LOAN_CAP', `negative loan ${world.dungeon.loanCp}`);

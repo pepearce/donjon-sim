@@ -28,6 +28,8 @@ export interface RoomPublic {
   h: number;
   cx: number;
   cy: number;
+  title: string;
+  deaths: number;
 }
 
 export interface FloorMapDTO {
@@ -60,6 +62,11 @@ export interface HeroPublic {
   hp: number;
   hpMax: number;
   alive: boolean;
+  kills: number;
+  traits: string[];
+  epithet: string;
+  nemesis: string;
+  scarred: boolean;
 }
 
 export interface TeamPublic {
@@ -75,6 +82,10 @@ export interface TeamPublic {
   morale: number;
   goldCp: number;
   roomsExplored: number;
+  standing: number;
+  renown: number;
+  deepestFloor: number;
+  carriedCp: number;
   heroes: HeroPublic[];
 }
 
@@ -115,6 +126,28 @@ export interface EventDTO {
   text: string;
 }
 
+export interface KeeperSchemePublic {
+  id: number;
+  kind: string;
+  name: string;
+  teamId: number;
+  teamName: string;
+  goal: number;
+  progress: number;
+  startedTick: number;
+  deadlineTick: number;
+  daysLeft: number;
+}
+
+export interface RecordRowDTO {
+  kind: string;
+  label: string;
+  value: number;
+  holder: string;
+  teamName: string;
+  tick: number;
+}
+
 export interface KeeperPublic {
   treasuryCp: number;
   loanCp: number;
@@ -129,6 +162,53 @@ export interface KeeperPublic {
   fame: number;
   notoriety: number;
   decree: string;
+  scheme: KeeperSchemePublic | null;
+  records: RecordRowDTO[];
+}
+
+export interface HeroRelationDTO {
+  id: number;
+  name: string;
+  v: number;
+}
+
+export interface HeroItemDTO {
+  name: string;
+  rarity: string;
+  valueCp: number;
+  atk: number;
+  def: number;
+  dr: number;
+}
+
+export interface HeroDetailDTO extends HeroPublic {
+  xp: number;
+  xpToNext: number;
+  stats: { str: number; agi: number; wil: number };
+  bornTick: number;
+  relations: HeroRelationDTO[];
+  nemesisDowns: number;
+  items: HeroItemDTO[];
+  goldCp: number;
+}
+
+export interface TeamHistoryDTO {
+  t: number;
+  k: string;
+  s: string;
+}
+
+export interface TeamDetailDTO {
+  id: number;
+  name: string;
+  motto: string;
+  standing: number;
+  greed: number;
+  rations: number;
+  carriedCp: number;
+  formedTick: number;
+  history: TeamHistoryDTO[];
+  heroes: HeroDetailDTO[];
 }
 
 export interface LeaderboardRowDTO {

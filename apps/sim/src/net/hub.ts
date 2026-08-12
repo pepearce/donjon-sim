@@ -106,7 +106,12 @@ export class Hub {
     let buffer: Buffer;
 
     if (previous) {
-      const frame = buildFrame(previous, next, { seq: this.seq, from, speed: this.speed });
+      const frame = buildFrame(previous, next, {
+        seq: this.seq,
+        from,
+        fromTick: previous.tick,
+        speed: this.speed,
+      });
       buffer = Buffer.from(`event: frame\nid: ${this.seq}\ndata: ${JSON.stringify(frame)}\n\n`, 'utf8');
     } else {
       buffer = Buffer.from(

@@ -2,6 +2,7 @@ import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { TRAP_NAMES } from '../tables.js';
 import { livingRoster } from '../world.js';
+import { hasTrait } from './traits.js';
 import { BLEED_OUT_TICKS, clamp, statMod, type Room, type Team, type World } from '../types.js';
 
 export function armTrap(world: World, room: Room, depth: number): void {
@@ -21,8 +22,17 @@ export function resolveTrap(world: World, team: Team, room: Room): void {
   if (living.length === 0) return;
 
   const rng = rngFor(world.seed, world.tick, RngDomain.TRAP_ROLL, team.id * 1000 + room.id);
-  const scout = living.reduce((best, h) => (h.stats.agi > best.stats.agi ? h : best), living[0]!);
-  const disarmChance = clamp(0.05, 0.9, 0.3 + 0.05 * statMod(scout.stats.agi) + (scout.className === 'sapper' ? 0.25 : 0));
+  const careful = living.filter((h) => hasTrait(h, 'cautious'));
+  const pool = careful.length > 0 ? careful : living;
+  const scout = pool.reduce((best, h) => (h.stats.agi > best.stats.agi ? h : best), pool[0]!);
+  const disarmChance = clamp(
+    0.05,
+    0.9,
+    0.3 +
+      0.05 * statMod(scout.stats.agi) +
+      (scout.className === 'sapper' ? 0.25 : 0) +
+      (hasTrait(scout, 'cautious') ? 0.12 : 0),
+  );
 
   if (rng.chance(disarmChance)) {
     room.trapState = 'disarmed';

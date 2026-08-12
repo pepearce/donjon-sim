@@ -1,5 +1,6 @@
 import type { FloorMapDTO, MonsterPublic, TokenPublic } from '@donjon/shared';
 import { MAP_PALETTE, teamColor, teamShape, type TokenShape } from '../design/teams.js';
+import { onFloor } from '../floorview.js';
 
 export const TILE_WALL = 0;
 export const TILE_FLOOR = 1;
@@ -74,6 +75,8 @@ export class MapRenderer {
   private terrainKey = '';
   private raf = 0;
   private map: FloorMapDTO | null = null;
+  private allTokens: TokenPublic[] = [];
+  private allMonsters: MonsterPublic[] = [];
   private tokens: TokenPublic[] = [];
   private monsters: MonsterPublic[] = [];
   private dpr = 1;
@@ -121,14 +124,23 @@ export class MapRenderer {
       this.terrainKey = key;
       this.rasteriseTerrain(map);
     }
+    this.reslice();
   }
 
   setTokens(tokens: TokenPublic[]): void {
-    this.tokens = tokens;
+    this.allTokens = tokens;
+    this.reslice();
   }
 
   setMonsters(monsters: MonsterPublic[]): void {
-    this.monsters = monsters;
+    this.allMonsters = monsters;
+    this.reslice();
+  }
+
+  private reslice(): void {
+    const floorId = this.map?.id ?? null;
+    this.tokens = onFloor(this.allTokens, floorId);
+    this.monsters = onFloor(this.allMonsters, floorId);
   }
 
   private focusPosition(): { x: number; y: number } | null {

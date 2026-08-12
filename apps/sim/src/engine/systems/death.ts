@@ -1,7 +1,11 @@
 import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { heroById, itemsOf, livingRoster, roster, teamById } from '../world.js';
-import { clamp, type Hero, type World } from '../types.js';
+import { floorOf, heroById, itemsOf, livingRoster, roster, teamById } from '../world.js';
+import { adjustStanding } from './dungeon.js';
+import { awardEpithet } from './epithets.js';
+import { fleeGrudges, griefMultiplier } from './relations.js';
+import { traitCount } from './traits.js';
+import { clamp, pushHistory, roomTitle, type Hero, type World } from '../types.js';
 
 export function resolveBleedOut(world: World, heroId: number): void {
   const hero = heroById(world, heroId);
@@ -50,8 +54,26 @@ export function killHero(world: World, hero: Hero): void {
 
   const team = hero.teamId === null ? undefined : teamById(world, hero.teamId);
   if (team) {
-    team.morale = clamp(0, 100, team.morale - 20);
+    const crew = livingRoster(world, team);
+    const grief = griefMultiplier(crew, hero.id);
+    team.morale = clamp(0, 100, team.morale - Math.round(20 * grief) - 3 * traitCount(crew, 'superstitious'));
     team.renownMilli = Math.max(0, team.renownMilli - 60 * 1000);
+    adjustStanding(team, -3);
+    if (team.state === 'fleeing' || team.lastAction === 'RETREAT') fleeGrudges(world, team);
+
+    const room = floorOf(world, team.floorId)?.rooms[team.roomIdx];
+    if (room) {
+      room.deaths += 1;
+      if (room.deaths === 3) {
+        emit(world, {
+          type: 'ROOM_LANDMARK',
+          teamId: team.id,
+          floorId: team.floorId,
+          roomId: room.id,
+          payload: { room: room.name, title: roomTitle(room), deaths: room.deaths },
+        });
+      }
+    }
   }
 
   world.scheduler.schedule(world.tick + 60, 'CORPSE_SWEEP', hero.id);
@@ -66,10 +88,16 @@ export function killHero(world: World, hero: Hero): void {
 
   if (team) {
     const alive = roster(world, team).filter((h) => h.state !== 'dead');
+    const survivor = alive[0];
+    if (alive.length === 1 && survivor && team.roster.length >= 3) {
+      awardEpithet(world, survivor, 'lonesurvivor');
+    }
     if (alive.length === 0) {
       team.state = 'disbanded';
       team.disbandedTick = world.tick;
       team.renownMilli = Math.max(0, team.renownMilli - 250 * 1000);
+      const depth = floorOf(world, team.floorId)?.depth ?? 1;
+      pushHistory(team, world.tick, 'wipe', `${team.name} was wiped out on floor ${depth}, to the last hand.`);
       emit(world, {
         type: 'TEAM_WIPE',
         teamId: team.id,

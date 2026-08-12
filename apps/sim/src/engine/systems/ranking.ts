@@ -1,4 +1,14 @@
-import type { Team, World } from '../types.js';
+import { DAY_TICKS } from '@donjon/shared';
+import { pushHistory, type Team, type World } from '../types.js';
+
+function rankedRecently(world: World, team: Team): boolean {
+  for (let i = team.history.length - 1; i >= 0; i--) {
+    const entry = team.history[i];
+    if (!entry || entry.k !== 'rank') continue;
+    return world.tick - entry.t < DAY_TICKS;
+  }
+  return false;
+}
 
 export const DECAY_NUM = 9985;
 export const DECAY_DEN = 10_000;
@@ -23,7 +33,11 @@ export function rankTeams(world: World): void {
     );
 
   ordered.forEach((team, index) => {
-    team.rank = index + 1;
+    const next = index + 1;
+    if (next <= 3 && (team.rank === 0 || next < team.rank) && !rankedRecently(world, team)) {
+      pushHistory(team, world.tick, 'rank', `${team.name} climbed to rank ${next} on the board.`);
+    }
+    team.rank = next;
   });
 
   for (const team of world.teams) {

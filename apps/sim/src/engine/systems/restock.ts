@@ -1,14 +1,15 @@
 import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { MONSTERS } from '../tables.js';
+import { GUARDIAN_NAMES, MONSTERS } from '../tables.js';
 import { floorOf } from '../world.js';
 import { monsterFromCr } from './combat.js';
+import { schemeAggressionFactor } from './dungeon.js';
 import { armTrap } from './traps.js';
 import type { Floor, Room, World } from '../types.js';
 
 export function stockRoom(world: World, floor: Floor, room: Room): void {
   const rng = rngFor(world.seed, world.tick, RngDomain.ROOM_STOCK, room.id);
-  const aggression = world.dungeon.aggressionMilli / 1000;
+  const aggression = (world.dungeon.aggressionMilli / 1000) * schemeAggressionFactor(world, floor.id);
   const pool = MONSTERS.filter((m) => m.minDepth <= floor.depth);
   if (pool.length === 0) return;
 
@@ -22,6 +23,26 @@ export function stockRoom(world: World, floor: Floor, room: Room): void {
     const cr = Math.max(0.5, (floor.dangerCr + archetype.crBias) * aggression);
     const monster = monsterFromCr(world, archetype.name, cr, room.id, floor.id, archetype.guardian || isGuardianRoom);
     world.monsters.push(monster);
+
+    if (monster.guardian) {
+      const nameRng = rngFor(world.seed, world.tick, RngDomain.MONSTER_PICK, monster.id);
+      const titled = nameRng.pick(GUARDIAN_NAMES);
+      emit(world, {
+        type: 'GUARDIAN_HIRED',
+        floorId: floor.id,
+        roomId: room.id,
+        payload: {
+          monster: titled.name,
+          title: titled.title,
+          archetype: monster.name,
+          depth: floor.depth,
+          floor: floor.name,
+          cr: Math.round(cr * 10) / 10,
+          cp: monster.wageCpPerDay,
+          wageCp: monster.wageCpPerDay,
+        },
+      });
+    }
   }
 
   room.state = 'stocked';

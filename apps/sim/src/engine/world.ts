@@ -3,7 +3,8 @@ import { MAX_ROSTER, RngDomain, rngFor, type Rng, type SimEvent } from '@donjon/
 import { generateFloor } from '../gen/floorgen.js';
 import { RingBuffer } from './ring.js';
 import { Scheduler } from './scheduler.js';
-import { CLASSES, GIVEN_NAMES, SPECIES, SURNAMES, TEAM_MOTTOS, TEAM_PREFIXES, TEAM_SUFFIXES } from './tables.js';
+import { CLASSES, GIVEN_NAMES, SPECIES, SURNAMES, TEAM_MOTTOS, TEAM_PREFIXES, TEAM_SUFFIXES, TRAITS } from './tables.js';
+import { pushHistory } from './types.js';
 import type { DungeonState, Floor, Hero, Item, Monster, Team, World } from './types.js';
 
 export * from './types.js';
@@ -42,7 +43,14 @@ export function makeHero(world: World, rng: Rng, level = 1): Hero {
     diedWallMs: null,
     goldCp: 0,
     items: [],
+    traits: [],
+    epithet: '',
+    nemesisName: '',
+    nemesisDowns: 0,
+    relations: [],
   };
+  const traitRng = rngFor(world.seed, world.tick, RngDomain.TRAIT, hero.id);
+  hero.traits.push(traitRng.pick(TRAITS).id);
   world.heroes.push(hero);
   return hero;
 }
@@ -107,7 +115,11 @@ export function makeTeam(world: World, rng: Rng, roster: Hero[]): Team {
     explored: new Set<string>(),
     exploredTiles: new Map<number, Uint8Array>(),
     trail: [],
+    history: [],
+    standing: 0,
   };
+
+  pushHistory(team, world.tick, 'formed', `${team.name} signed articles in the tavern and paid the entry fee.`);
 
   for (const hero of roster.slice(0, MAX_ROSTER)) hero.teamId = team.id;
   world.teams.push(team);
@@ -132,6 +144,8 @@ function initialDungeon(): DungeonState {
     corpseYieldCp: 0,
     mintedCp: 0,
     sinkCp: 0,
+    scheme: null,
+    records: [],
   };
 }
 
@@ -152,6 +166,7 @@ export function genesis(seed: number): World {
     nextTeamId: 1,
     nextMonsterId: 1,
     nextItemId: 1,
+    nextSchemeId: 1,
     initialCoinCp: 0,
     pendingEvents: [],
     tailRing: new RingBuffer<SimEvent>(500),
@@ -237,6 +252,11 @@ export function worldDigest(w: World): string {
   u32(bytes, w.dungeon.heroesSlain);
   u32(bytes, w.dungeon.mintedCp);
   u32(bytes, w.dungeon.sinkCp);
+  u32(bytes, w.dungeon.scheme?.id ?? 0);
+  u32(bytes, w.dungeon.records.length);
+  let recordTotal = 0;
+  for (const r of w.dungeon.records) recordTotal += r.value;
+  u32(bytes, recordTotal);
 
   for (const t of [...w.teams].sort((a, b) => a.id - b.id)) {
     u32(bytes, t.id);
@@ -252,6 +272,8 @@ export function worldDigest(w: World): string {
     u32(bytes, t.renownMilli);
     u32(bytes, t.deepestFloor);
     u32(bytes, t.state.length);
+    u32(bytes, t.standing + 100);
+    u32(bytes, t.history.length);
   }
   for (const h of [...w.heroes].sort((a, b) => a.id - b.id)) {
     u32(bytes, h.id);
@@ -261,6 +283,13 @@ export function worldDigest(w: World): string {
     u32(bytes, h.state === 'ok' ? 1 : h.state === 'downed' ? 2 : 3);
     u32(bytes, h.kills);
     u32(bytes, h.goldCp);
+    u32(bytes, h.traits.length);
+    u32(bytes, h.epithet.length);
+    u32(bytes, h.nemesisName.length);
+    u32(bytes, h.relations.length);
+    let bondTotal = 0;
+    for (const r of h.relations) bondTotal += r.v;
+    u32(bytes, bondTotal + 600);
   }
   for (const m of [...w.monsters].sort((a, b) => a.id - b.id)) {
     u32(bytes, m.id);

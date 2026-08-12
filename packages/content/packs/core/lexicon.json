@@ -85,5 +85,97 @@
     { "word": "covering someone's shift", "tags": ["absurd"] },
     { "word": "with a grievance pending", "tags": ["absurd"] },
     { "word": "off the books entirely", "tags": ["dry"] }
+  ],
+  "entry_line": [
+    { "word": "The door closed behind them without comment", "tags": ["grim"] },
+    { "word": "The clerk noted the time of entry", "tags": ["dry"] },
+    { "word": "Names were taken, in case", "tags": ["dry", "absurd"] },
+    { "word": "Somebody counted them going in", "tags": ["neutral"] },
+    { "word": "The gate takes no view either way", "tags": ["grim"] },
+    { "word": "The Keeper was informed by the usual channels", "tags": ["absurd"] }
+  ],
+  "epithet_aside": [
+    { "word": "The name will outlast the hero", "tags": ["epic"] },
+    { "word": "It was entered in the register that evening", "tags": ["dry"] },
+    { "word": "Nobody asked whether it was wanted", "tags": ["absurd"] },
+    { "word": "The tavern had it inside the hour", "tags": ["comic"] },
+    { "word": "Names are issued, not requested", "tags": ["dry", "absurd"] },
+    { "word": "It will look well on the stone", "tags": ["epic", "grim"] }
+  ],
+  "retire_line": [
+    { "word": "The waiver came back unused", "tags": ["dry"] },
+    { "word": "There was a cake, of sorts", "tags": ["comic"] },
+    { "word": "The register was amended without ceremony", "tags": ["dry"] },
+    { "word": "Very few manage it", "tags": ["grim"] },
+    { "word": "The front door was used correctly, for once", "tags": ["absurd"] },
+    { "word": "The Keeper marked the file closed and meant it", "tags": ["dry", "grim"] }
+  ],
+  "guardian_terms": [
+    { "word": "a full annual contract, signed", "tags": ["absurd"] },
+    { "word": "duties as described, and then some", "tags": ["dry"] },
+    { "word": "salaried, which is new", "tags": ["absurd"] },
+    { "word": "at rates the Keeper already regrets", "tags": ["dry"] },
+    { "word": "a title longer than its arms", "tags": ["comic"] },
+    { "word": "a desk of its own, even", "tags": ["absurd"] },
+    { "word": "no probation, no notice period", "tags": ["dry", "grim"] }
+  ],
+  "record_aside": [
+    { "word": "The board was amended", "tags": ["dry"] },
+    { "word": "The previous holder was not consulted", "tags": ["absurd"] },
+    { "word": "Someone chalked it up in the hall", "tags": ["neutral"] },
+    { "word": "The old figure was scratched out without ceremony", "tags": ["grim"] },
+    { "word": "It will stand until it does not", "tags": ["grim", "epic"] },
+    { "word": "The clerk wrote it down twice, to be sure", "tags": ["dry", "absurd"] }
+  ],
+  "vow_line": [
+    { "word": "The name went into the book", "tags": ["dry"] },
+    { "word": "Nothing was said. Everything was noted", "tags": ["grim"] },
+    { "word": "Some accounts are personal", "tags": ["dry", "epic"] },
+    { "word": "It was filed under long-term liabilities", "tags": ["absurd"] },
+    { "word": "The account was left open", "tags": ["dry", "epic"] },
+    { "word": "Grudges compound faster than interest", "tags": ["absurd", "epic"] }
+  ],
+  "settled_line": [
+    { "word": "The account is closed", "tags": ["dry"] },
+    { "word": "Interest and all", "tags": ["dry", "comic"] },
+    { "word": "Nobody contested the valuation", "tags": ["absurd"] },
+    { "word": "The book balances", "tags": ["dry", "epic"] },
+    { "word": "Paid in full, late, and in person", "tags": ["epic"] },
+    { "word": "The matter is no longer outstanding", "tags": ["dry"] },
+    { "word": "It took longer than it should have", "tags": ["grim"] },
+    { "word": "Nobody wrote it down. Everybody remembers", "tags": ["grim", "epic"] }
+  ],
+  "bond_line": [
+    { "word": "shared a flask afterwards and said nothing useful", "tags": ["comic"] },
+    { "word": "have stopped counting who owes whom", "tags": ["neutral"] },
+    { "word": "will lie for each other on the incident form", "tags": ["absurd"] },
+    { "word": "split the next purse without an argument", "tags": ["neutral"] },
+    { "word": "stand back to back now, out of habit", "tags": ["epic"] },
+    { "word": "have an understanding, unwritten and binding", "tags": ["dry"] }
+  ],
+  "grudge_line": [
+    { "word": "sat at opposite ends of the fire", "tags": ["grim"] },
+    { "word": "have not spoken since the stairs", "tags": ["grim"] },
+    { "word": "remember it differently, and badly", "tags": ["dry"] },
+    { "word": "will not be rostered together by choice", "tags": ["dry"] },
+    { "word": "keep separate ledgers now", "tags": ["absurd"] },
+    { "word": "each blame the other, which saves time", "tags": ["comic"] }
+  ],
+  "scheme_aside": [
+    { "word": "circulated internally only", "tags": ["dry"] },
+    { "word": "objectives not for publication", "tags": ["dry"] },
+    { "word": "the paperwork was dated in advance", "tags": ["absurd"] },
+    { "word": "budget approved, ethics pending", "tags": ["absurd"] },
+    { "word": "no minutes were taken", "tags": ["grim"] },
+    { "word": "results to be reviewed at close of quarter", "tags": ["dry"] },
+    { "word": "the Keeper considers this routine", "tags": ["grim"] }
+  ],
+  "landmark_line": [
+    { "word": "The name stuck", "tags": ["neutral"] },
+    { "word": "The Keeper has stopped repainting the sign", "tags": ["absurd"] },
+    { "word": "Nobody proposed a better one", "tags": ["comic"] },
+    { "word": "The masons were paid to carve it properly", "tags": ["absurd"] },
+    { "word": "It is on the map now", "tags": ["dry"] },
+    { "word": "Rooms earn their names", "tags": ["grim"] }
   ]
 }

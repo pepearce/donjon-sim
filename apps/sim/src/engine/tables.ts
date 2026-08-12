@@ -162,6 +162,93 @@ export const ITEMS: ItemArchetype[] = [
   { id: 'crown', name: 'repossessed crown', atk: 2, def: 2, dr: 1 },
 ];
 
+export interface TraitRow {
+  id: string;
+  label: string;
+  blurb: string;
+}
+
+export const TRAITS: TraitRow[] = [
+  { id: 'greedy', label: 'Greedy', blurb: 'Reads the ledger before the last rites.' },
+  { id: 'craven', label: 'Craven', blurb: 'First to the stairs, every time, on principle.' },
+  { id: 'bold', label: 'Bold', blurb: 'Signs the waiver without turning the page.' },
+  { id: 'vengeful', label: 'Vengeful', blurb: 'Keeps a grudge in triplicate.' },
+  { id: 'loyal', label: 'Loyal', blurb: 'Will drag a colleague home unpaid.' },
+  { id: 'reckless', label: 'Reckless', blurb: 'Considers hazard pay a personal challenge.' },
+  { id: 'cautious', label: 'Cautious', blurb: 'Has never once opened a door first.' },
+  { id: 'pious', label: 'Pious', blurb: 'Tithes to something that has not confirmed receipt.' },
+  { id: 'lucky', label: 'Lucky', blurb: 'Survives on a technicality most weeks.' },
+  { id: 'glory_hound', label: 'Glory Hound', blurb: 'Wants the plaque more than the payout.' },
+  { id: 'hoarder', label: 'Hoarder', blurb: 'Banks nothing, carries everything, dies rich.' },
+  { id: 'superstitious', label: 'Superstitious', blurb: 'Will not delve on an odd tick.' },
+];
+
+export interface EpithetRow {
+  id: string;
+  text: string;
+  requires: string;
+}
+
+export const EPITHETS: EpithetRow[] = [
+  { id: 'kills10_a', text: 'the Unaudited', requires: 'kills10' },
+  { id: 'kills10_b', text: 'Ledgerbane', requires: 'kills10' },
+  { id: 'kills10_c', text: 'the Ten-Times Deducted', requires: 'kills10' },
+  { id: 'kills10_d', text: 'Writ-of-Slaughter', requires: 'kills10' },
+  { id: 'level5_a', text: 'the Tenured', requires: 'level5' },
+  { id: 'level5_b', text: 'the Fifth-Grade Delver', requires: 'level5' },
+  { id: 'level5_c', text: 'the Vested', requires: 'level5' },
+  { id: 'level5_d', text: 'the Promoted', requires: 'level5' },
+  { id: 'lonesurvivor_a', text: 'the Sole Claimant', requires: 'lonesurvivor' },
+  { id: 'lonesurvivor_b', text: 'the Last Line Item', requires: 'lonesurvivor' },
+  { id: 'lonesurvivor_c', text: 'Widow of the Roster', requires: 'lonesurvivor' },
+  { id: 'lonesurvivor_d', text: 'the Surviving Party', requires: 'lonesurvivor' },
+  { id: 'nemesis_a', text: 'the Settled Account', requires: 'nemesis' },
+  { id: 'nemesis_b', text: 'Grudgekeeper', requires: 'nemesis' },
+  { id: 'nemesis_c', text: 'the Reconciled', requires: 'nemesis' },
+  { id: 'nemesis_d', text: 'Debt-Collected', requires: 'nemesis' },
+  { id: 'deep_a', text: 'the Sublevelled', requires: 'deep' },
+  { id: 'deep_b', text: 'Fourth-Floor Fixture', requires: 'deep' },
+  { id: 'deep_c', text: 'the Deeply Filed', requires: 'deep' },
+  { id: 'deep_d', text: 'of the Lower Vault', requires: 'deep' },
+  { id: 'rich_a', text: 'the Liquid', requires: 'rich' },
+  { id: 'rich_b', text: 'Purse-of-Office', requires: 'rich' },
+  { id: 'rich_c', text: 'the Solvent', requires: 'rich' },
+  { id: 'rich_d', text: 'Coinsworn', requires: 'rich' },
+];
+
+export const SCHEME_NAMES = [
+  'Operation Quarterly Bloodletting',
+  'The Adverse Findings Initiative',
+  'Programme Deepwater Writeoff',
+  'The Reconciliation of Losses',
+  'Operation Courteous Foreclosure',
+  'The Structured Discouragement',
+  'Programme Tollgate Surplus',
+  'The Involuntary Retirement Scheme',
+  'Operation Prudent Attrition',
+  'The Final Notice Campaign',
+];
+
+export interface GuardianNameRow {
+  name: string;
+  title: string;
+}
+
+export const GUARDIAN_NAMES: GuardianNameRow[] = [
+  { name: 'Vaultmaw', title: 'Auditor of the Lower Vault' },
+  { name: 'Grimlend', title: 'Holder of Bad Debt' },
+  { name: 'Ossifer Bray', title: 'Bailiff of the Third Landing' },
+  { name: 'Tallowsend', title: 'Keeper of the Petty Cash' },
+  { name: 'Marrowclerk', title: 'Registrar of the Fallen' },
+  { name: 'Quillspite', title: 'Notary of Unread Clauses' },
+  { name: 'Ironsum', title: 'Reconciler of Accounts' },
+  { name: 'The Grey Assessor', title: 'Valuer of Estates in Arrears' },
+  { name: 'Cinderwrit', title: 'Warden of the Burnt Ledgers' },
+  { name: 'Dampsworn', title: 'Steward of the Flooded Wing' },
+  { name: 'Gallowsfee', title: 'Collector of the Corpse Tax' },
+  { name: 'Lastcandle', title: 'Overseer of Closing Hours' },
+];
+
 export const TRAP_NAMES = [
   'a spring-loaded invoice',
   'a collapsing shelf of ledgers',

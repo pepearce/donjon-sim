@@ -24,6 +24,11 @@ export const RngDomain = {
   SCHEDULER: 23,
   FLAVOUR_SELECT: 24,
   FLAVOUR_FILL: 25,
+  TRAIT: 27,
+  RELATION: 28,
+  SCHEME: 29,
+  RECORD: 30,
+  COMBAT_TARGET_WEIGHT: 31,
 } as const;
 
 export type RngDomain = (typeof RngDomain)[keyof typeof RngDomain];

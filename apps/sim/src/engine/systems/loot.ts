@@ -3,7 +3,14 @@ import { emit } from '../emit.js';
 import { ITEMS } from '../tables.js';
 import { livingRoster } from '../world.js';
 import { COIN_SETPOINT } from './economy.js';
-import { RARITY_BASE_CP, RARITY_NAMES, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
+import { hasTrait } from './traits.js';
+import { RARITY_BASE_CP, RARITY_NAMES, type Hero, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
+
+function bearerRank(hero: Hero): number {
+  if (hasTrait(hero, 'greedy')) return 0;
+  if (hasTrait(hero, 'hoarder')) return 1;
+  return 2;
+}
 
 export function rarityWeights(depth: number): number[] {
   return [
@@ -80,8 +87,8 @@ export function dropLoot(world: World, team: Team, room: Room): void {
 
   if (item) {
     item.ownerTeamId = team.id;
-    const bearers = livingRoster(world, team);
-    const bearer = bearers.length > 0 ? bearers[world.tick % bearers.length] : undefined;
+    const bearers = livingRoster(world, team).sort((a, b) => bearerRank(a) - bearerRank(b) || a.id - b.id);
+    const bearer = bearers[0];
     if (bearer) {
       item.ownerHeroId = bearer.id;
       bearer.items.push(item.id);

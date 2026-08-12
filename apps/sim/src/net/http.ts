@@ -3,7 +3,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { PROTOCOL_VERSION, TICK_MS, type BootstrapDTO } from '@donjon/shared';
 import { SIM_VERSION } from '../db/boot.js';
 import { encodeFog } from '../engine/fog.js';
-import { projectFloorIndex, projectFloorMap, projectSnapshot, projectTeams } from '../snapshot/projector.js';
+import {
+  projectFloorIndex,
+  projectFloorMap,
+  projectSnapshot,
+  projectTeamDetail,
+  projectTeams,
+} from '../snapshot/projector.js';
 import type { Hub } from './hub.js';
 import type { World } from '../engine/world.js';
 
@@ -96,6 +102,17 @@ export function createHttpServer(deps: HttpDeps): Server {
         sight: [...sight],
         tiles: encodeFog(team),
       });
+      return;
+    }
+
+    const detailMatch = /^\/api\/v1\/teams\/(\d+)\/detail$/.exec(path);
+    if (detailMatch) {
+      const detail = projectTeamDetail(world, Number(detailMatch[1]));
+      if (!detail) {
+        json(res, 404, { error: { code: 'no_such_team', message: path } });
+        return;
+      }
+      json(res, 200, detail);
       return;
     }
 

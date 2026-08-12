@@ -1,4 +1,5 @@
 import {
+  DAY_TICKS,
   PROTOCOL_VERSION,
   TICK_MS,
   dayOf,
@@ -6,18 +7,22 @@ import {
   type EventDTO,
   type FloorIndexEntry,
   type FloorMapDTO,
+  type HeroDetailDTO,
   type KeeperPublic,
+  type KeeperSchemePublic,
   type LeaderboardRowDTO,
   type MemorialEntryDTO,
   type MonsterPublic,
+  type RecordRowDTO,
   type SnapshotDTO,
+  type TeamDetailDTO,
   type TeamPublic,
   type TokenPublic,
   type Watch,
 } from '@donjon/shared';
 import { narrate, type LoadedPack } from '@donjon/content';
-import { floorOf, roster } from '../engine/world.js';
-import type { Floor, World } from '../engine/types.js';
+import { RARITY_NAMES, floorOf, heroById, itemsOf, roomTitle, roster, xpToNext } from '../engine/world.js';
+import type { Floor, Hero, World } from '../engine/types.js';
 
 let activePack: LoadedPack | null = null;
 
@@ -49,6 +54,8 @@ export function projectFloorMap(world: World, floorId: number): FloorMapDTO | nu
       h: r.h,
       cx: r.cx,
       cy: r.cy,
+      title: roomTitle(r),
+      deaths: r.deaths,
     })),
     entryRoom: floor.entryRoom,
     stairsRoom: floor.stairsRoom,
@@ -73,6 +80,10 @@ export function projectTeams(world: World): TeamPublic[] {
         morale: Math.round(team.morale),
         goldCp: Math.round(team.goldCp + team.carriedCp),
         roomsExplored: Math.round(team.renownMilli / 1000),
+        standing: Math.round(team.standing),
+        renown: Math.round(team.renownMilli / 1000),
+        deepestFloor: team.deepestFloor,
+        carriedCp: Math.round(team.carriedCp),
         heroes: roster(world, team).map((h) => ({
           id: h.id,
           name: h.name,
@@ -82,9 +93,68 @@ export function projectTeams(world: World): TeamPublic[] {
           hp: Math.round(h.hp),
           hpMax: Math.round(h.hpMax),
           alive: h.state === 'ok',
+          kills: h.kills,
+          traits: h.traits.slice(),
+          epithet: h.epithet,
+          nemesis: h.nemesisName,
+          scarred: h.scarred,
         })),
       };
     });
+}
+
+function projectHeroDetail(world: World, h: Hero): HeroDetailDTO {
+  return {
+    id: h.id,
+    name: h.name,
+    species: h.species,
+    className: h.className,
+    level: h.level,
+    hp: Math.round(h.hp),
+    hpMax: Math.round(h.hpMax),
+    alive: h.state === 'ok',
+    kills: h.kills,
+    traits: h.traits.slice(),
+    epithet: h.epithet,
+    nemesis: h.nemesisName,
+    scarred: h.scarred,
+    xp: h.xp,
+    xpToNext: xpToNext(h.level),
+    stats: { str: h.stats.str, agi: h.stats.agi, wil: h.stats.wil },
+    bornTick: h.bornTick,
+    relations: h.relations.map((r) => ({
+      id: r.id,
+      name: heroById(world, r.id)?.name ?? 'a stranger',
+      v: r.v,
+    })),
+    nemesisDowns: h.nemesisDowns,
+    items: itemsOf(world, h).map((i) => ({
+      name: i.name,
+      rarity: RARITY_NAMES[i.rarity] ?? 'common',
+      valueCp: Math.round(i.valueCp),
+      atk: i.atk,
+      def: i.def,
+      dr: i.dr,
+    })),
+    goldCp: Math.round(h.goldCp),
+  };
+}
+
+export function projectTeamDetail(world: World, teamId: number): TeamDetailDTO | null {
+  const team = world.teams.find((t) => t.id === teamId);
+  if (!team) return null;
+  return {
+    id: team.id,
+    name: team.name,
+    motto: team.motto,
+    standing: Math.round(team.standing),
+    greed: team.greed,
+    rations: team.rations,
+    carriedCp: Math.round(team.carriedCp),
+    formedTick: team.formedTick,
+    history: team.history.map((h) => ({ t: h.t, k: h.k, s: h.s })),
+    heroes: roster(world, team).map((h) => projectHeroDetail(world, h)),
+  };
 }
 
 export function projectTokens(world: World): TokenPublic[] {
@@ -179,6 +249,30 @@ export function describeEvent(
       return `The dungeon opens for business: ${NUM(payload['floors'])} floors, ${NUM(payload['rooms'])} rooms`;
     case 'DUNGEON_DORMANCY':
       return `The dungeon was dormant for ${Math.round(NUM(payload['dormancyMs']) / 1000)}s`;
+    case 'HERO_EPITHET_GAINED':
+      return `${STR(payload['hero'])} is now known as ${STR(payload['epithet'])}`;
+    case 'HERO_NEMESIS_SET':
+      return `${STR(payload['hero'])} will not forget that ${STR(payload['monster'])}`;
+    case 'HERO_NEMESIS_SLAIN':
+      return `${STR(payload['hero'])} settled the account with ${STR(payload['monster'])}`;
+    case 'HERO_BOND_FORMED':
+      return `${STR(payload['hero'] ?? payload['a'])} and ${STR(payload['other'] ?? payload['b'])} owe each other their lives`;
+    case 'HERO_GRUDGE_FORMED':
+      return `${STR(payload['hero'] ?? payload['a'])} has not forgiven ${STR(payload['other'] ?? payload['b'])}`;
+    case 'KEEPER_SCHEME_SET':
+      return `The Keeper opened ${STR(payload['name'])} against ${STR(payload['team'])} (${STR(payload['kind'])}, ${NUM(payload['days'])} days)`;
+    case 'KEEPER_SCHEME_ENDED':
+      return `${STR(payload['name'])} against ${STR(payload['team'])} ${STR(payload['outcome']) === 'won' ? 'succeeded' : 'came to nothing'}`;
+    case 'ROOM_LANDMARK':
+      return `${STR(payload['room'])} is now called ${STR(payload['title'])} after ${NUM(payload['deaths'])} deaths`;
+    case 'RECORD_SET':
+      return `${STR(payload['holder'])} of ${STR(payload['team'])} set a record: ${STR(payload['label'])} ${NUM(payload['value'])}`;
+    case 'HERO_RETIRED':
+      return `${STR(payload['hero'])} filed for retirement with ${NUM(payload['goldCp'])}cp`;
+    case 'GUARDIAN_HIRED':
+      return `The Keeper hired ${STR(payload['monster'])} to hold floor ${NUM(payload['depth'])}`;
+    case 'PARTY_ENTERED':
+      return `${STR(payload['team'])} walked into floor ${NUM(payload['depth'])}`;
     default:
       return `${type} ${JSON.stringify(payload)}`;
   }
@@ -275,6 +369,35 @@ export function projectMonsters(world: World): MonsterPublic[] {
   return out;
 }
 
+function projectScheme(world: World): KeeperSchemePublic | null {
+  const scheme = world.dungeon.scheme;
+  if (!scheme) return null;
+  const target = world.teams.find((t) => t.id === scheme.targetTeamId);
+  return {
+    id: scheme.id,
+    kind: scheme.kind,
+    name: scheme.name,
+    teamId: scheme.targetTeamId,
+    teamName: target?.name ?? '',
+    goal: Math.round(scheme.goal),
+    progress: Math.round(scheme.progress),
+    startedTick: scheme.startedTick,
+    deadlineTick: scheme.deadlineTick,
+    daysLeft: Math.max(0, Math.ceil((scheme.deadlineTick - world.tick) / DAY_TICKS)),
+  };
+}
+
+function projectRecords(world: World): RecordRowDTO[] {
+  return world.dungeon.records.map((r) => ({
+    kind: r.kind,
+    label: r.label,
+    value: Math.round(r.value),
+    holder: r.holder,
+    teamName: r.teamName,
+    tick: r.tick,
+  }));
+}
+
 export function projectKeeper(world: World): KeeperPublic {
   const d = world.dungeon;
   return {
@@ -295,6 +418,8 @@ export function projectKeeper(world: World): KeeperPublic {
       .filter((e) => e.type === 'KEEPER_DECREE')
       .map((e) => String(e.payload['text'] ?? ''))
       .pop() ?? '',
+    scheme: projectScheme(world),
+    records: projectRecords(world),
   };
 }
 

@@ -73,14 +73,6 @@ export class SimStore {
     return this.teams.reduce((n, t) => n + t.heroes.filter((h) => h.alive).length, 0);
   }
 
-  get tokensOnFloor(): TokenPublic[] {
-    return this.tokens.filter((t) => t.floorId === this.selectedFloor);
-  }
-
-  get monstersOnFloor(): MonsterPublic[] {
-    return this.monsters.filter((m) => m.floorId === this.selectedFloor);
-  }
-
   applyBootstrap(boot: BootstrapDTO): void {
     this.epoch = boot.server.epoch;
     this.speed = boot.server.speed;

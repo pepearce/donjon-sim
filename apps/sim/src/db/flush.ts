@@ -23,11 +23,13 @@ export class Flusher {
         INSERT INTO teams (id, name, motto, color_index, monogram, state, floor_id, room_idx,
           target_room, tile_x, tile_y, path_pos, path, morale, gold_cp, carried_cp, rations,
           greed_milli, renown_milli, peak_renown_milli, rank, deepest_floor, last_action,
-          commit_until_tick, rest_until_tick, formed_tick, disbanded_tick, explored, explored_tiles)
+          commit_until_tick, rest_until_tick, formed_tick, disbanded_tick, explored, explored_tiles,
+          history, standing)
         VALUES (@id, @name, @motto, @colorIndex, @monogram, @state, @floorId, @roomIdx,
           @targetRoom, @tileX, @tileY, @pathPos, @path, @morale, @goldCp, @carriedCp, @rations,
           @greedMilli, @renownMilli, @peakRenownMilli, @rank, @deepestFloor, @lastAction,
-          @commitUntilTick, @restUntilTick, @formedTick, @disbandedTick, @explored, @exploredTiles)
+          @commitUntilTick, @restUntilTick, @formedTick, @disbandedTick, @explored, @exploredTiles,
+          @history, @standing)
         ON CONFLICT(id) DO UPDATE SET
           state = excluded.state, floor_id = excluded.floor_id, room_idx = excluded.room_idx,
           target_room = excluded.target_room, tile_x = excluded.tile_x, tile_y = excluded.tile_y,
@@ -37,21 +39,25 @@ export class Flusher {
           rank = excluded.rank, deepest_floor = excluded.deepest_floor,
           last_action = excluded.last_action, commit_until_tick = excluded.commit_until_tick,
           rest_until_tick = excluded.rest_until_tick, disbanded_tick = excluded.disbanded_tick,
-          explored = excluded.explored, explored_tiles = excluded.explored_tiles
+          explored = excluded.explored, explored_tiles = excluded.explored_tiles,
+          history = excluded.history, standing = excluded.standing
       `),
       hero: db.prepare(`
         INSERT INTO heroes (id, name, species, class_name, primary_stat, team_id, level, xp, hp,
           hp_max, str, agi, wil, state, bleed_out_tick, kills, scarred, born_tick, died_tick,
-          died_wall_ms, gold_cp)
+          died_wall_ms, gold_cp, traits, epithet, nemesis_name, nemesis_downs, relations)
         VALUES (@id, @name, @species, @className, @primary, @teamId, @level, @xp, @hp,
           @hpMax, @str, @agi, @wil, @state, @bleedOutTick, @kills, @scarred, @bornTick, @diedTick,
-          @diedWallMs, @goldCp)
+          @diedWallMs, @goldCp, @traits, @epithet, @nemesisName, @nemesisDowns, @relations)
         ON CONFLICT(id) DO UPDATE SET
           team_id = excluded.team_id, level = excluded.level, xp = excluded.xp, hp = excluded.hp,
           hp_max = excluded.hp_max, str = excluded.str, agi = excluded.agi, wil = excluded.wil,
           state = excluded.state, bleed_out_tick = excluded.bleed_out_tick, kills = excluded.kills,
           scarred = excluded.scarred, died_tick = excluded.died_tick,
-          died_wall_ms = excluded.died_wall_ms, gold_cp = excluded.gold_cp
+          died_wall_ms = excluded.died_wall_ms, gold_cp = excluded.gold_cp,
+          traits = excluded.traits, epithet = excluded.epithet,
+          nemesis_name = excluded.nemesis_name, nemesis_downs = excluded.nemesis_downs,
+          relations = excluded.relations
       `),
       room: db.prepare(`
         INSERT INTO rooms (id, floor_id, idx, name, x, y, w, h, cx, cy, state, loot_cp,
@@ -92,18 +98,21 @@ export class Flusher {
       dungeon: db.prepare(`
         INSERT INTO dungeon (id, treasury_cp, loan_cp, austerity, aggression_milli,
           lethality_ema_milli, revenue_ema_cp, fame_milli, notoriety_milli, entry_fee_cp, toll_bp,
-          corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, minted_cp, sink_cp)
+          corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, minted_cp, sink_cp,
+          scheme, records)
         VALUES (1, @treasuryCp, @loanCp, @austerity, @aggressionMilli, @lethalityEmaMilli,
           @revenueEmaCp, @fameMilli, @notorietyMilli, @entryFeeCp, @tollBp, @corpseTaxBp,
-          @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp)
+          @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp, @scheme, @records)
         ON CONFLICT(id) DO UPDATE SET
           treasury_cp = excluded.treasury_cp, loan_cp = excluded.loan_cp,
           austerity = excluded.austerity, aggression_milli = excluded.aggression_milli,
           lethality_ema_milli = excluded.lethality_ema_milli, revenue_ema_cp = excluded.revenue_ema_cp,
           fame_milli = excluded.fame_milli, notoriety_milli = excluded.notoriety_milli,
+          entry_fee_cp = excluded.entry_fee_cp, toll_bp = excluded.toll_bp,
+          corpse_tax_bp = excluded.corpse_tax_bp,
           keeper_mood = excluded.keeper_mood, heroes_slain = excluded.heroes_slain,
           corpse_yield_cp = excluded.corpse_yield_cp, minted_cp = excluded.minted_cp,
-          sink_cp = excluded.sink_cp
+          sink_cp = excluded.sink_cp, scheme = excluded.scheme, records = excluded.records
       `),
       clearTavern: db.prepare('DELETE FROM tavern'),
       tavern: db.prepare('INSERT INTO tavern (hero_id) VALUES (?)'),
@@ -112,6 +121,7 @@ export class Flusher {
       world: db.prepare(`
         UPDATE world SET tick = @tick, next_event_id = @nextEventId, next_hero_id = @nextHeroId,
           next_team_id = @nextTeamId, next_monster_id = @nextMonsterId, next_item_id = @nextItemId,
+          next_scheme_id = @nextSchemeId,
           initial_coin_cp = @initialCoinCp, last_flush_ms = @now, status = 'running'
         WHERE id = 1
       `),
@@ -186,6 +196,8 @@ export class Flusher {
           disbandedTick: team.disbandedTick,
           explored: JSON.stringify([...team.explored]),
           exploredTiles: JSON.stringify(encodeFog(team)),
+          history: JSON.stringify(team.history ?? []),
+          standing: Math.round(team.standing ?? 0),
         });
       }
 
@@ -212,6 +224,11 @@ export class Flusher {
           diedTick: hero.diedTick,
           diedWallMs: hero.diedWallMs,
           goldCp: Math.round(hero.goldCp),
+          traits: JSON.stringify(hero.traits ?? []),
+          epithet: hero.epithet ?? '',
+          nemesisName: hero.nemesisName ?? '',
+          nemesisDowns: Math.round(hero.nemesisDowns ?? 0),
+          relations: JSON.stringify(hero.relations ?? []),
         });
       }
 
@@ -278,6 +295,8 @@ export class Flusher {
         corpseYieldCp: Math.round(d.corpseYieldCp),
         mintedCp: Math.round(d.mintedCp),
         sinkCp: Math.round(d.sinkCp),
+        scheme: JSON.stringify(d.scheme ?? null),
+        records: JSON.stringify(d.records ?? []),
       });
 
       for (const event of world.pendingEvents) {
@@ -301,6 +320,7 @@ export class Flusher {
         nextTeamId: world.nextTeamId,
         nextMonsterId: world.nextMonsterId,
         nextItemId: world.nextItemId,
+        nextSchemeId: world.nextSchemeId ?? 1,
         initialCoinCp: world.initialCoinCp,
         now,
       });

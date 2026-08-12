@@ -1,7 +1,7 @@
 import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { MAX_TEAMS, makeHero, makeTeam, roster } from '../world.js';
-import { clamp, type World } from '../types.js';
+import { MAX_TEAMS, heroById, makeHero, makeTeam, roster } from '../world.js';
+import { clamp, relationTo, type Hero, type World } from '../types.js';
 
 const SOFT_FLOOR_HEROES = 20;
 const TARGET_HEROES = 40;
@@ -62,15 +62,32 @@ export function formTeams(world: World): void {
 
   const size = rng.int(3, 4);
   const picked: number[] = [];
-  for (let i = 0; i < size && world.tavern.length > 0; i++) {
-    const idx = rng.int(0, world.tavern.length - 1);
-    const [id] = world.tavern.splice(idx, 1);
+  const anchorIdx = rng.int(0, world.tavern.length - 1);
+  const [anchorId] = world.tavern.splice(anchorIdx, 1);
+  if (anchorId === undefined) return;
+  picked.push(anchorId);
+
+  const anchor = heroById(world, anchorId);
+  const bondRng = rngFor(world.seed, world.tick, RngDomain.RELATION, world.nextTeamId);
+  for (let i = 1; i < size && world.tavern.length > 0; i++) {
+    const weights = world.tavern.map((id) => Math.max(1, 100 + (anchor ? relationTo(anchor, id) : 0)));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let point = bondRng.float() * total;
+    let chosen = 0;
+    for (let j = 0; j < world.tavern.length; j++) {
+      point -= weights[j] ?? 0;
+      if (point <= 0) {
+        chosen = j;
+        break;
+      }
+    }
+    const [id] = world.tavern.splice(chosen, 1);
     if (id !== undefined) picked.push(id);
   }
 
   const heroes = picked
-    .map((id) => world.heroes.find((h) => h.id === id))
-    .filter((h): h is NonNullable<typeof h> => h !== undefined);
+    .map((id) => heroById(world, id))
+    .filter((h): h is Hero => h !== undefined);
   if (heroes.length < 3) {
     world.tavern.push(...picked);
     return;
@@ -96,7 +113,23 @@ export function retireStragglers(world: World): void {
     for (const hero of crew) {
       if (hero.state === 'dead') continue;
       hero.teamId = null;
-      if (!world.tavern.includes(hero.id) && world.tavern.length < MAX_POOL) world.tavern.push(hero.id);
+      if (world.tavern.includes(hero.id)) continue;
+      if (world.tavern.length < MAX_POOL) {
+        world.tavern.push(hero.id);
+        continue;
+      }
+      emit(world, {
+        type: 'HERO_RETIRED',
+        heroId: hero.id,
+        payload: {
+          hero: hero.name,
+          level: hero.level,
+          className: hero.className,
+          goldCp: hero.goldCp,
+          epithet: hero.epithet,
+          kills: hero.kills,
+        },
+      });
     }
     team.roster = [];
   }

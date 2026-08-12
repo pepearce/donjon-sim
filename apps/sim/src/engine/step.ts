@@ -3,15 +3,25 @@ import { emit } from './emit.js';
 import { attemptStabilise, resolveCombatRound } from './systems/combat.js';
 import { resolveBleedOut, sweepCorpse } from './systems/death.js';
 import { bankLoot, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
-import { issueDecree, resolveLoan, updateAggression, updateFameAndNotoriety, updateKeeperMood } from './systems/dungeon.js';
+import {
+  issueDecree,
+  maybeStartScheme,
+  resolveLoan,
+  tickScheme,
+  updateAggression,
+  updateFameAndNotoriety,
+  updateKeeperMood,
+} from './systems/dungeon.js';
 import { advanceTeam, ascend, descend, repath } from './systems/movement.js';
 import { decayRenown, rankTeams } from './systems/ranking.js';
 import { activeTeamCount, arrivals, formTeams, retireStragglers } from './systems/recruit.js';
+import { updateSurvivorRecord } from './systems/records.js';
+import { fleeGrudges } from './systems/relations.js';
 import { resolveRestock } from './systems/restock.js';
 import { armTrap } from './systems/traps.js';
 import { COMMIT_TICKS, chooseAction } from './systems/teamAi.js';
-import { floorOf, livingRoster, roster } from './world.js';
-import { clamp, type Team, type World } from './types.js';
+import { floorOf, livingRoster, monstersIn, roster } from './world.js';
+import { clamp, pushHistory, type Team, type World } from './types.js';
 
 const DISBAND_BROKE_TICKS = DAY_TICKS * 3;
 const DISBAND_MORALE_TICKS = 1800;
@@ -61,9 +71,15 @@ function applyAction(world: World, team: Team): void {
   if (!floor) return;
 
   const action = chooseAction(world, team);
-  if (action !== team.lastAction) {
+  const switched = action !== team.lastAction;
+  if (switched) {
     team.lastAction = action;
     team.commitUntilTick = world.tick + (COMMIT_TICKS[action] ?? 4);
+  }
+
+  if (switched && (action === 'FLEE' || action === 'RETREAT')) {
+    const abandoned = roster(world, team).some((h) => h.state === 'downed');
+    if (abandoned) fleeGrudges(world, team);
   }
 
   switch (action) {
@@ -114,12 +130,14 @@ function maybeDisband(world: World, team: Team): void {
 
   if (reasons.length === 0) return;
 
+  const reason = reasons[0] ?? 'unknown';
   team.state = 'disbanded';
   team.disbandedTick = world.tick;
+  pushHistory(team, world.tick, 'disband', `${team.name} dissolved the partnership: ${reason}.`);
   emit(world, {
     type: 'TEAM_DISBANDED',
     teamId: team.id,
-    payload: { team: team.name, reason: reasons[0] ?? 'unknown' },
+    payload: { team: team.name, reason },
   });
 }
 
@@ -152,6 +170,12 @@ export function step(world: World): void {
     }
   }
 
+  for (const team of active) {
+    if (team.state !== 'fighting') continue;
+    if (monstersIn(world, team.floorId, team.roomIdx).length > 0) continue;
+    resolveCombatRound(world, team);
+  }
+
   for (const team of active) maybeDisband(world, team);
 
   retireStragglers(world);
@@ -164,11 +188,14 @@ export function step(world: World): void {
     updateFameAndNotoriety(world);
     resolveLoan(world);
     updateKeeperMood(world);
+    tickScheme(world);
   }
 
   if (world.tick % DAY_TICKS === 0) {
     dailyUpkeep(world);
     updateAggression(world, world.dungeon.heroesSlain, Math.max(1, activeTeamCount(world)));
     issueDecree(world);
+    updateSurvivorRecord(world);
+    maybeStartScheme(world);
   }
 }

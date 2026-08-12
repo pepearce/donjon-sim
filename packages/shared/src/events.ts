@@ -33,6 +33,13 @@ export const EVENT_TYPES = [
   'KHAN_LOAN',
   'RECORD_SET',
   'DUNGEON_DORMANCY',
+  'HERO_NEMESIS_SET',
+  'HERO_NEMESIS_SLAIN',
+  'HERO_BOND_FORMED',
+  'HERO_GRUDGE_FORMED',
+  'KEEPER_SCHEME_SET',
+  'KEEPER_SCHEME_ENDED',
+  'ROOM_LANDMARK',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -53,6 +60,8 @@ export const SEVERITY: Record<EventType, Severity> = {
   WAGE_PAID: 1,
   RECRUIT: 1,
   DUNGEON_RESTOCK: 1,
+  HERO_BOND_FORMED: 1,
+  HERO_GRUDGE_FORMED: 1,
   HERO_DOWN: 2,
   ROOM_CLEARED: 2,
   FLOOR_DESCEND: 2,
@@ -66,6 +75,8 @@ export const SEVERITY: Record<EventType, Severity> = {
   HERO_EPITHET_GAINED: 2,
   HERO_RETIRED: 2,
   TEAM_DISBANDED: 2,
+  HERO_NEMESIS_SET: 2,
+  ROOM_LANDMARK: 2,
   HERO_DEATH: 3,
   TEAM_WIPE: 3,
   TEAM_FORMED: 3,
@@ -74,6 +85,9 @@ export const SEVERITY: Record<EventType, Severity> = {
   RECORD_SET: 3,
   WORLD_INIT: 3,
   DUNGEON_DORMANCY: 3,
+  HERO_NEMESIS_SLAIN: 3,
+  KEEPER_SCHEME_SET: 3,
+  KEEPER_SCHEME_ENDED: 3,
 };
 
 export interface SimEvent {

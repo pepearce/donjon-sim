@@ -1,6 +1,6 @@
 import { RngDomain, rngFor, type Rng } from '@donjon/shared';
 import { buildApsp } from './apsp.js';
-import { TILE_DOOR, TILE_FLOOR, TILE_RUBBLE, TILE_STAIRS, TILE_WALL, type Floor, type Room } from '../engine/types.js';
+import { TILE_DOOR, TILE_FLOOR, TILE_RUBBLE, TILE_STAIRS, TILE_WALL, isWalkable, type Floor, type Room } from '../engine/types.js';
 
 export const FLOOR_WIDTH = 60;
 export const FLOOR_HEIGHT = 40;
@@ -255,6 +255,10 @@ export function tilePath(floor: Floor, from: number, to: number): Array<[number,
   } else {
     walkY(b.cy);
     walkX(b.cx);
+  }
+
+  for (const [px, py] of path) {
+    if (!isWalkable(floor, px, py)) return [];
   }
   return path;
 }
