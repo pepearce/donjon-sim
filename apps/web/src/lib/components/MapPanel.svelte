@@ -353,11 +353,11 @@
   <header
     class="flex h-10 shrink-0 items-center justify-between border-b-2 border-ink-900 bg-stone-900 px-3"
   >
-    <h2 class="truncate font-display text-title text-parchment-200">
+    <h2 class="truncate font-display text-display-sm leading-none text-parchment-100">
       {floorInfo?.name ?? 'The Ground Floor'}
     </h2>
-    <span class="shrink-0 font-mono text-micro text-stone-400">
-      tick {sim.tick} · seq {sim.seq} · {frameMs}ms
+    <span class="shrink-0 font-mono text-micro text-stone-600">
+      tick {sim.tick} · {frameMs}ms
     </span>
   </header>
 
@@ -380,12 +380,12 @@
       <div class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
         <p
           class="font-mono text-micro uppercase tracking-widest {autoMode === 'free'
-            ? 'text-stone-400'
+            ? 'text-stone-600'
             : 'text-torch-300'}"
         >
           {autoMode === 'director' ? 'Director' : autoMode === 'follow' ? 'Follow' : 'Free look'}
         </p>
-        <div class="pointer-events-auto flex gap-1">
+        <div class="pointer-events-auto flex gap-1 opacity-60 transition-opacity focus-within:opacity-100 hover:opacity-100">
           <button
             type="button"
             class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro text-parchment-200 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
@@ -400,15 +400,15 @@
           >
             <span aria-hidden="true">+</span><span class="sr-only">Zoom the map in</span>
           </button>
-          <button
-            type="button"
-            class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro uppercase tracking-widest {viewMoved
-              ? 'text-torch-300'
-              : 'text-stone-400'} hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
-            onclick={resetView}
-          >
-            Reset view
-          </button>
+          {#if viewMoved}
+            <button
+              type="button"
+              class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro uppercase tracking-widest text-torch-300 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
+              onclick={resetView}
+            >
+              Reset view
+            </button>
+          {/if}
         </div>
       </div>
     </div>

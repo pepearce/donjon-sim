@@ -4,13 +4,11 @@
   import ConnectionBanner from '$lib/components/ConnectionBanner.svelte';
   import EventTicker from '$lib/components/EventTicker.svelte';
   import KeeperPanel from '$lib/components/KeeperPanel.svelte';
-  import Leaderboard from '$lib/components/Leaderboard.svelte';
   import MapPanel from '$lib/components/MapPanel.svelte';
-  import Memorial from '$lib/components/Memorial.svelte';
   import SpeedControl from '$lib/components/SpeedControl.svelte';
   import StatCard from '$lib/components/StatCard.svelte';
-  import TeamCard from '$lib/components/TeamCard.svelte';
   import TeamDrawer from '$lib/components/TeamDrawer.svelte';
+  import TeamRoster from '$lib/components/TeamRoster.svelte';
   import { connect } from '$lib/connection.svelte.js';
   import { createMotion } from '$lib/applyFrame.js';
   import { createSimStore, setMotion } from '$lib/store.svelte.js';
@@ -29,22 +27,12 @@
   setMotion(motion);
 
   let sideTab = $state<'teams' | 'board'>('teams');
-  let rosterEl = $state<HTMLElement | null>(null);
   let codexOpen = $state(false);
 
   onMount(() => {
     const connection = connect(sim, motion);
     return () => connection.close();
   });
-
-  const sortedTeams = $derived(
-    [...sim.teams].sort((a, b) => {
-      const aliveA = a.heroes.filter((h) => h.alive).length;
-      const aliveB = b.heroes.filter((h) => h.alive).length;
-      if (aliveA === 0 !== (aliveB === 0)) return aliveA === 0 ? 1 : -1;
-      return a.id - b.id;
-    }),
-  );
 
   const deepest = $derived(Math.max(1, ...sim.floors.map((f) => f.depth)));
   const cameraStatus = $derived(
@@ -79,8 +67,9 @@
     e.preventDefault();
     sideTab = 'teams';
     await tick();
-    rosterEl?.scrollIntoView({ block: 'nearest' });
-    rosterEl?.focus();
+    const el = document.getElementById('roster');
+    el?.scrollIntoView({ block: 'nearest' });
+    el?.focus();
   }
 
   function onKeydown(e: KeyboardEvent): void {
@@ -138,26 +127,34 @@
 
 <div class="dash-grid" class:is-stale={sim.isStale} class:has-dossier={sim.drawerOpen} data-tab={sideTab}>
   <header
-    class="ink flex h-14 items-center gap-4 overflow-x-auto bg-stone-900 px-3 shadow-ink"
+    class="ink flex h-14 items-center gap-4 overflow-x-auto overflow-y-hidden bg-stone-900 px-3 shadow-ink"
     style="grid-area: topbar"
   >
     <div class="shrink-0 pr-1">
       <h1 class="font-display text-display-sm leading-none text-torch-300">DONJON</h1>
-      <p class="font-mono text-micro leading-none text-stone-400">KEEPER'S BOARD</p>
+      <p class="font-mono text-micro leading-none text-stone-500">KEEPER'S BOARD</p>
     </div>
     <span class="h-9 w-0.5 shrink-0 bg-ink-900"></span>
     <StatCard label="FALLEN" value={sim.casualties} tone="danger" />
-    <StatCard label="HEROES" value={sim.heroesLiving} hint="{sim.tavernSize} in the tavern" />
-    <StatCard label="TEAMS" value="{sim.teams.length}/10" />
     <StatCard label="TREASURY" value={(sim.keeper?.treasuryCp ?? 0).toLocaleString()} tone="gold" />
-    <StatCard label="DAY" value={sim.day} hint={sim.watch.toLowerCase()} />
-    <StatCard label="DEEPEST" value="F{deepest}" />
+    <div class="hidden shrink-0 flex-col gap-1 font-mono text-micro text-stone-500 lg:flex">
+      <p>
+        DAY <span class="text-parchment-200">{sim.day}</span>
+        <span class="text-stone-600">·</span>
+        {sim.watch.toLowerCase()}
+      </p>
+      <p>
+        {sim.heroesLiving} afield <span class="text-stone-600">·</span>
+        {sim.tavernSize} in the tavern <span class="text-stone-600">·</span>
+        {sim.teams.length}/10 companies <span class="text-stone-600">·</span> deepest F{deepest}
+      </p>
+    </div>
     <div class="ml-auto flex shrink-0 items-center gap-3">
-      <p class="keys font-mono text-micro text-stone-400">
+      <p class="keys font-mono text-micro text-stone-600">
         <span class:text-torch-300={sim.follow}>F FOLLOW</span>
-        <span class="text-stone-600">·</span>
+        <span class="text-stone-700">·</span>
         <span class:text-torch-300={sim.director}>D DIRECTOR</span>
-        <span class="text-stone-600">·</span>
+        <span class="text-stone-700">·</span>
         <span>[ ] FLOOR</span>
       </p>
       <button
@@ -187,7 +184,7 @@
         aria-pressed={sideTab === 'teams'}
         onclick={() => (sideTab = 'teams')}
       >
-        TEAMS
+        THE FIELD
       </button>
       <button
         type="button"
@@ -199,34 +196,24 @@
         aria-pressed={sideTab === 'board'}
         onclick={() => (sideTab = 'board')}
       >
-        RANKINGS
+        THE KEEPER
       </button>
     </div>
 
     <aside
       id="roster"
-      bind:this={rosterEl}
       tabindex="-1"
-      class="ink flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-stone-900 p-2"
+      class="ink flex min-h-0 flex-1 flex-col overflow-hidden bg-stone-900/80"
       style="grid-area: roster"
-      aria-label="Teams"
     >
-      <h2 class="text-label text-parchment-300">TEAMS &amp; LOOT</h2>
-      {#each sortedTeams as team (team.id)}
-        <TeamCard {team} />
-      {:else}
-        <p class="text-body-sm text-stone-500">No teams in the dungeon.</p>
-      {/each}
+      <TeamRoster />
     </aside>
 
     <aside
-      class="rail ink flex min-h-0 flex-1 flex-col bg-stone-900"
+      class="rail ink flex min-h-0 flex-1 flex-col overflow-hidden bg-stone-900/80"
       style="grid-area: rail"
-      aria-label="Rankings and dungeon status"
     >
-      <div class="min-h-0 flex-1 overflow-hidden"><Leaderboard /></div>
       <KeeperPanel />
-      <div class="min-h-0 flex-1 overflow-hidden"><Memorial /></div>
     </aside>
   </div>
 
@@ -261,10 +248,11 @@
   .dash-grid {
     display: grid;
     height: 100dvh;
+    overflow: hidden;
     gap: 0.75rem;
     padding: 0.75rem;
-    grid-template-columns: 21rem minmax(480px, 1fr) 21.25rem;
-    grid-template-rows: 3.5rem minmax(0, 1fr) 200px;
+    grid-template-columns: 20rem minmax(460px, 1fr) 19rem;
+    grid-template-rows: 3.5rem minmax(0, 1fr) 15rem;
     grid-template-areas:
       'topbar topbar topbar'
       'roster map rail'
@@ -310,9 +298,9 @@
     display: block;
   }
 
-  @media (min-width: 1600px) {
+  @media (min-width: 1560px) {
     .dash-grid.has-dossier {
-      grid-template-columns: 21rem minmax(360px, 1fr) 21.25rem 24rem;
+      grid-template-columns: 20rem minmax(400px, 1fr) 19rem 23rem;
       grid-template-areas:
         'topbar topbar topbar topbar'
         'roster map rail dossier'
@@ -322,7 +310,10 @@
     .dash-grid.has-dossier .dossier {
       position: static;
       width: auto;
+      min-height: 0;
+      overflow: hidden;
       padding: 0;
+      animation: none;
     }
 
     .scrim:not(.codex-scrim) {
@@ -332,8 +323,8 @@
 
   @media (max-width: 1279px) {
     .dash-grid {
-      grid-template-columns: minmax(0, 1fr) 21rem;
-      grid-template-rows: 3.5rem minmax(0, 1fr) 180px;
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      grid-template-rows: 3.5rem minmax(0, 1fr) 13rem;
       grid-template-areas:
         'topbar topbar'
         'map side'
@@ -359,6 +350,10 @@
     .dash-grid[data-tab='teams'] .rail {
       display: none;
     }
+
+    .side-stack :global(section > header > h2) {
+      display: none;
+    }
   }
 
   @media (max-width: 767px) {
@@ -377,7 +372,7 @@
     display: none;
   }
 
-  @media (min-width: 1600px) {
+  @media (min-width: 1560px) {
     .keys {
       display: block;
       white-space: nowrap;

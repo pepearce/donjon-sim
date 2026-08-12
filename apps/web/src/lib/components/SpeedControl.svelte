@@ -72,11 +72,11 @@
       disabled={busy}
       aria-pressed={sim.speed === s}
       title="{s}× — one in-world minute every {(1 / s).toFixed(2)}s"
-      class="rounded-sm border px-1.5 py-0.5 font-mono text-micro transition-colors disabled:opacity-50"
+      class="rounded-sm border border-transparent px-1.5 py-0.5 font-mono text-micro transition-colors hover:text-parchment-200 disabled:opacity-50"
       class:border-torch-400={sim.speed === s}
+      class:bg-sev-2-wash={sim.speed === s}
       class:text-torch-300={sim.speed === s}
-      class:border-stone-700={sim.speed !== s}
-      class:text-stone-400={sim.speed !== s}
+      class:text-stone-500={sim.speed !== s}
     >
       {s}×
     </button>

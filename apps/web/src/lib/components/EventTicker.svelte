@@ -261,7 +261,7 @@
 
 <section class="ink flex min-h-0 flex-col bg-stone-900" aria-label="Event feed">
   <header class="flex shrink-0 flex-wrap items-center gap-1 border-b-2 border-ink-900 px-2 py-1">
-    <h2 class="shrink-0 pr-1 font-display text-title leading-none text-parchment-200">
+    <h2 class="shrink-0 pr-1 font-display text-display-sm leading-none text-parchment-100">
       THE FEED
     </h2>
     {#if sim.selectedTeam !== null}
@@ -283,12 +283,11 @@
         type="button"
         onclick={() => setFilter(f)}
         aria-pressed={filter === f}
-        class="shrink-0 rounded-full border px-2 py-0.5 font-mono text-micro uppercase transition-colors"
+        class="shrink-0 rounded-full border border-transparent px-2 py-0.5 font-mono text-micro uppercase transition-colors hover:text-parchment-200"
         class:border-torch-400={filter === f}
         class:bg-sev-2-wash={filter === f}
         class:text-torch-300={filter === f}
-        class:border-stone-700={filter !== f}
-        class:text-stone-400={filter !== f}
+        class:text-stone-500={filter !== f}
       >
         {f}
       </button>
@@ -296,11 +295,10 @@
     <button
       type="button"
       onclick={togglePause}
-      class="ml-auto shrink-0 rounded-full border bg-stone-900 px-2 py-0.5 font-mono text-micro"
+      class="ml-auto shrink-0 rounded-full border border-transparent bg-stone-900 px-2 py-0.5 font-mono text-micro hover:text-parchment-200"
       class:border-torch-400={paused}
       class:text-torch-300={paused}
-      class:border-stone-700={!paused}
-      class:text-stone-400={!paused}
+      class:text-stone-500={!paused}
       aria-pressed={paused}
     >
       {paused ? '▶ RESUME' : '⏸ PAUSE'}

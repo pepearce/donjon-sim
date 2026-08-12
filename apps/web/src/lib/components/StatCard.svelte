@@ -21,10 +21,10 @@
   );
 </script>
 
-<div class="flex min-w-[104px] shrink-0 flex-col justify-center">
+<div class="flex min-w-[92px] shrink-0 flex-col justify-center">
   <span class="truncate font-mono text-micro leading-none text-stone-500">{label}</span>
-  <span class="mt-1.5 font-mono text-stat leading-none tabular {toneClass}">{value}</span>
+  <span class="mt-1 font-mono text-stat-xl leading-none tabular {toneClass}">{value}</span>
   {#if hint}
-    <span class="mt-1.5 truncate text-micro leading-none text-stone-600">{hint}</span>
+    <span class="mt-1 truncate text-micro leading-none text-stone-600">{hint}</span>
   {/if}
 </div>

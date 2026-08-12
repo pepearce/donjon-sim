@@ -24,12 +24,7 @@
   });
 </script>
 
-<section class="flex h-full min-h-0 flex-col border-t-2 border-ink-900" aria-label="Hero memorial">
-  <h2 class="flex shrink-0 items-baseline justify-between border-b-2 border-ink-900 px-3 py-1.5">
-    <span class="text-label text-parchment-300">THE FALLEN</span>
-    <span class="font-mono text-num tabular text-blood-300">{sim.casualties}</span>
-  </h2>
-  <ul class="min-h-0 flex-1 overflow-y-auto px-3 py-1">
+<ul class="px-3 py-1" aria-label="Hero memorial">
     {#each sim.memorial as hero (hero.id)}
       {@const epithet = epithets.get(hero.id)}
       {@const cause = causes.get(hero.id)}
@@ -58,7 +53,6 @@
         {/if}
       </li>
     {:else}
-      <li class="py-4 text-center text-body-sm text-stone-500">Nobody has died yet. Give it time.</li>
+      <li class="py-4 text-body-sm text-stone-500 italic">Nobody has died yet. Give it time.</li>
     {/each}
   </ul>
-</section>

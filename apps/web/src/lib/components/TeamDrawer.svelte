@@ -100,7 +100,7 @@
 
   onMount(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const overlay = !window.matchMedia('(min-width: 1600px)').matches;
+    const overlay = !window.matchMedia('(min-width: 1560px)').matches;
     let held = false;
     const onFocusIn = (e: FocusEvent): void => {
       held = e.target instanceof Node && root !== null && root.contains(e.target);

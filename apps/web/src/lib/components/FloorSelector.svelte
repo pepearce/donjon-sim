@@ -4,7 +4,10 @@
   const sim = useSim();
 </script>
 
-<nav class="flex w-10 shrink-0 flex-col border-r-2 border-ink-900 bg-stone-900/60" aria-label="Floors">
+<nav
+  class="flex w-10 min-h-0 shrink-0 flex-col overflow-y-auto border-r-2 border-ink-900 bg-stone-900/60"
+  aria-label="Floors"
+>
   {#each sim.floors as floor (floor.id)}
     <button
       type="button"

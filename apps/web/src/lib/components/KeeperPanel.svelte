@@ -1,8 +1,20 @@
 <script lang="ts">
   import { DAY_TICKS } from '@donjon/shared';
   import { useSim } from '../store.svelte.js';
+  import Memorial from './Memorial.svelte';
 
   const sim = useSim();
+
+  const TABS = ['ledger', 'records', 'fallen'] as const;
+  type Tab = (typeof TABS)[number];
+
+  const TAB_LABEL: Record<Tab, string> = {
+    ledger: 'LEDGER',
+    records: 'RECORDS',
+    fallen: 'THE FALLEN',
+  };
+
+  let tab = $state<Tab>('ledger');
 
   const RECORD_ORDER = ['deepest', 'haul', 'kills', 'survivor', 'toll'];
 
@@ -117,17 +129,17 @@
   }
 </script>
 
-<section
-  class="flex max-h-[50%] shrink-0 flex-col overflow-y-auto border-t-2 border-ink-900"
-  aria-label="Dungeon status"
->
-  <h2 class="sticky top-0 z-10 border-b-2 border-ink-900 bg-stone-900 px-3 py-1.5 text-label text-parchment-300">
-    THE KEEPER
-  </h2>
+<section class="flex h-full min-h-0 flex-col" aria-label="The Keeper">
+  <header class="flex shrink-0 items-baseline gap-2 border-b-2 border-ink-900 px-3 py-1.5">
+    <h2 class="font-display text-title leading-none text-parchment-200">THE KEEPER</h2>
+    {#if sim.keeper}
+      <span class="ml-auto font-mono text-micro {moodTone}">{sim.keeper.mood.toUpperCase()}</span>
+    {/if}
+  </header>
 
   {#if sim.keeper}
     {#if scheme}
-      <article class="m-2 rounded-sm border-2 border-blood-500 bg-sev-3-wash shadow-ink-sm">
+      <article class="m-2 shrink-0 rounded-sm border-2 border-blood-500 bg-sev-3-wash shadow-ink-sm">
         <header class="flex items-center gap-1.5 border-b-2 border-blood-500/60 px-2 py-1">
           <span class="size-2 shrink-0 rounded-full bg-blood-400 animate-ember"></span>
           <span class="font-mono text-micro text-blood-300">SCHEME IN MOTION</span>
@@ -141,7 +153,7 @@
           <p class="text-body-sm text-stone-200">{schemeAim}</p>
 
           <p class="flex items-baseline gap-1.5">
-            <span class="font-mono text-micro text-stone-400">MARKED</span>
+            <span class="font-mono text-micro text-stone-500">MARKED</span>
             {#if sim.teams.some((t) => t.id === scheme.teamId)}
               <button
                 type="button"
@@ -151,7 +163,7 @@
                 {scheme.teamName} ›
               </button>
             {:else}
-              <span class="truncate font-mono text-micro text-stone-400 line-through">{scheme.teamName}</span>
+              <span class="truncate font-mono text-micro text-stone-500 line-through">{scheme.teamName}</span>
             {/if}
           </p>
 
@@ -173,101 +185,104 @@
       </article>
     {/if}
 
-    <div class="space-y-2 px-3 pb-2" class:pt-2={!scheme}>
-      <div class="flex items-baseline justify-between">
-        <span class="text-micro text-stone-400">MOOD</span>
-        <span class="font-display {scheme ? 'text-body-sm' : 'text-title'} {moodTone}">
-          {sim.keeper.mood.toUpperCase()}
-        </span>
+    {#if sim.keeper.lastAct && sim.keeper.lastAct !== 'observe'}
+      <div class="mx-2 mb-2 shrink-0 rounded-sm border-l-2 border-arcane-400 bg-ink-900/60 px-2 py-1">
+        <div class="flex items-baseline justify-between font-mono text-micro">
+          <span class="text-stone-500">TODAY</span>
+          <span class="text-stone-600">{actAge}</span>
+        </div>
+        <p class="text-body-sm {moodTone}">{sim.keeper.lastActText}</p>
       </div>
+    {/if}
 
-      {#if sim.keeper.lastAct}
-        <div
-          class="rounded-sm border-l-2 px-2 py-1 {sim.keeper.lastAct === 'observe'
-            ? 'border-stone-600 bg-ink-900/40'
-            : 'border-arcane-400 bg-ink-900/60'}"
+    <div class="flex shrink-0 gap-3 border-y border-ink-900 px-3" role="group" aria-label="Keeper records">
+      {#each TABS as t (t)}
+        <button
+          type="button"
+          onclick={() => (tab = t)}
+          aria-pressed={tab === t}
+          class="-mb-px border-b-2 py-1 font-mono text-micro transition-colors"
+          class:border-torch-400={tab === t}
+          class:text-parchment-200={tab === t}
+          class:border-transparent={tab !== t}
+          class:text-stone-500={tab !== t}
         >
-          <div class="flex items-baseline justify-between font-mono text-micro">
-            <span class="text-stone-400">TODAY</span>
-            <span class="text-stone-500">{actAge}</span>
-          </div>
-          <p
-            class="text-body-sm {sim.keeper.lastAct === 'observe'
-              ? 'text-stone-500 italic'
-              : moodTone}"
-          >
-            {sim.keeper.lastActText}
-          </p>
-        </div>
-      {/if}
-
-      <div>
-        <div class="flex justify-between font-mono text-micro">
-          <span class="text-stone-400">TREASURY</span>
-          <span class="text-rank-gold">{sim.keeper.treasuryCp.toLocaleString()}cp</span>
-        </div>
-        <div class="mt-0.5 h-2 overflow-hidden rounded-full bg-ink-900/60">
-          <div class="h-full bg-rank-gold transition-[width] duration-300" style="width: {treasuryPct}%"></div>
-        </div>
-      </div>
-
-      {#if sim.keeper.loanCp > 0}
-        <div>
-          <div class="flex justify-between font-mono text-micro">
-            <span class="text-stone-400">KHAN LOAN</span>
-            <span class="text-blood-300">{sim.keeper.loanCp.toLocaleString()}cp</span>
-          </div>
-          <div class="mt-0.5 h-2 overflow-hidden rounded-full bg-ink-900/60">
-            <div class="h-full bg-blood-400 transition-[width] duration-300" style="width: {loanPct}%"></div>
-          </div>
-        </div>
-      {/if}
-
-      <dl class="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-micro tabular">
-        <div class="flex justify-between"><dt class="text-stone-400">STAFF</dt><dd>{sim.keeper.staff}</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">SLAIN</dt><dd class="text-blood-300">{sim.keeper.heroesSlain}</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">ENTRY</dt><dd>{sim.keeper.entryFeeCp}cp</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">TOLL</dt><dd>{(sim.keeper.tollBp / 100).toFixed(0)}%</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">CORPSE</dt><dd>{(sim.keeper.corpseTaxBp / 100).toFixed(0)}%</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">AGGRO</dt><dd>{sim.keeper.aggression.toFixed(2)}</dd></div>
-        <div class="flex justify-between"><dt class="text-stone-400">FAME</dt><dd>{sim.keeper.fame}</dd></div>
-      </dl>
-
-      {#if sim.keeper.austerity}
-        <p class="rounded-sm border border-blood-400 px-2 py-1 font-mono text-micro text-blood-300">
-          AUSTERITY — GUARDIANS UNPAID
-        </p>
-      {/if}
-
-      {#if sim.keeper.decree}
-        <p class="border-l-2 border-arcane-400 pl-2 text-body-sm text-arcane-300 italic">
-          “{sim.keeper.decree}”
-        </p>
-      {/if}
+          {TAB_LABEL[t]}{#if t === 'fallen'}<span class="ml-1 text-blood-300">{sim.casualties}</span>{/if}
+        </button>
+      {/each}
     </div>
 
-    {#if records.length > 0}
-      <div class="border-t-2 border-ink-900">
-        <h3 class="px-3 py-1 text-label text-parchment-300">THE BOOK OF RECORDS</h3>
-        <ul class="px-3 pb-2">
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      {#if tab === 'ledger'}
+        <div class="space-y-2 px-3 py-2">
+          <div>
+            <div class="flex justify-between font-mono text-micro">
+              <span class="text-stone-500">TREASURY</span>
+              <span class="text-rank-gold">{sim.keeper.treasuryCp.toLocaleString()}cp</span>
+            </div>
+            <div class="mt-0.5 h-2 overflow-hidden rounded-full bg-ink-900/60">
+              <div class="h-full bg-rank-gold transition-[width] duration-300" style="width: {treasuryPct}%"></div>
+            </div>
+          </div>
+
+          {#if sim.keeper.loanCp > 0}
+            <div>
+              <div class="flex justify-between font-mono text-micro">
+                <span class="text-stone-500">KHAN LOAN</span>
+                <span class="text-blood-300">{sim.keeper.loanCp.toLocaleString()}cp</span>
+              </div>
+              <div class="mt-0.5 h-2 overflow-hidden rounded-full bg-ink-900/60">
+                <div class="h-full bg-blood-400 transition-[width] duration-300" style="width: {loanPct}%"></div>
+              </div>
+            </div>
+          {/if}
+
+          <dl class="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-micro tabular text-stone-300">
+            <div class="flex justify-between"><dt class="text-stone-500">STAFF</dt><dd>{sim.keeper.staff}</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">SLAIN</dt><dd class="text-blood-300">{sim.keeper.heroesSlain}</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">ENTRY</dt><dd>{sim.keeper.entryFeeCp}cp</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">TOLL</dt><dd>{(sim.keeper.tollBp / 100).toFixed(0)}%</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">CORPSE</dt><dd>{(sim.keeper.corpseTaxBp / 100).toFixed(0)}%</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">AGGRO</dt><dd>{sim.keeper.aggression.toFixed(2)}</dd></div>
+            <div class="flex justify-between"><dt class="text-stone-500">FAME</dt><dd>{sim.keeper.fame}</dd></div>
+          </dl>
+
+          {#if sim.keeper.austerity}
+            <p class="rounded-sm border border-blood-400 px-2 py-1 font-mono text-micro text-blood-300">
+              AUSTERITY — GUARDIANS UNPAID
+            </p>
+          {/if}
+
+          {#if sim.keeper.decree}
+            <p class="border-l-2 border-arcane-400 pl-2 text-body-sm text-arcane-300 italic">
+              “{sim.keeper.decree}”
+            </p>
+          {/if}
+        </div>
+      {:else if tab === 'records'}
+        <ul class="px-3 py-2">
           {#each records as record (record.kind)}
-            <li class="flex items-baseline gap-2 border-b border-ink-900/40 py-0.5 last:border-0" title={record.label}>
-              <span class="w-14 shrink-0 font-mono text-micro text-stone-400">
+            <li class="flex items-baseline gap-2 border-b border-ink-900/40 py-1 last:border-0" title={record.label}>
+              <span class="w-12 shrink-0 font-mono text-micro text-stone-500">
                 {RECORD_NAME[record.kind] ?? record.kind.toUpperCase()}
               </span>
               <span class="shrink-0 font-mono text-num tabular text-rank-gold">
                 {recordValue(record.kind, record.value)}
               </span>
-              <span class="min-w-0 flex-1 truncate text-right text-micro text-stone-300">
+              <span class="min-w-0 flex-1 truncate text-right text-micro text-stone-400">
                 {record.holder}{record.teamName && record.teamName !== record.holder
                   ? ` · ${record.teamName}`
                   : ''}
               </span>
             </li>
+          {:else}
+            <li class="py-4 text-body-sm text-stone-500 italic">The book is still blank.</li>
           {/each}
         </ul>
-      </div>
-    {/if}
+      {:else}
+        <Memorial />
+      {/if}
+    </div>
   {:else}
     <p class="px-3 py-4 text-center text-body-sm text-stone-500">No keeper data.</p>
   {/if}

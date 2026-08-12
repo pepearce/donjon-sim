@@ -2,13 +2,15 @@
   import type { TeamPublic } from '@donjon/shared';
   import { teamColor } from '../design/teams.js';
   import { useSim } from '../store.svelte.js';
-  import { hpTone, standingWord } from './dossier.js';
+  import { coin, hpTone, standingWord } from './dossier.js';
 
   interface Props {
     team: TeamPublic;
+    rank?: number;
+    move?: number;
   }
 
-  let { team }: Props = $props();
+  let { team, rank = 0, move = 0 }: Props = $props();
   const sim = useSim();
 
   const alive = $derived(team.heroes.filter((h) => h.alive).length);
@@ -18,6 +20,14 @@
   const selected = $derived(sim.selectedTeam === team.id);
   const dead = $derived(alive === 0);
   const accent = $derived(teamColor(team.colorIndex));
+  const shaken = $derived(team.morale < 40);
+  const medal = $derived(
+    rank === 1
+      ? 'text-parchment-700'
+      : rank === 2 || rank === 3
+        ? 'text-stone-600'
+        : 'text-stone-500',
+  );
   const crew = $derived(
     team.heroes.map((h) => ({
       id: h.id,
@@ -29,7 +39,7 @@
     })),
   );
   const summary = $derived(
-    `${team.name}. ${alive} of ${team.heroes.length} standing on floor ${team.floorId}. Renown ${team.renown}, standing ${standingWord(team.standing)}. ${crew.map((c) => c.label).join('. ')}`,
+    `${rank > 0 ? `Rank ${rank}. ` : ''}${team.name}. ${alive} of ${team.heroes.length} standing on floor ${team.floorId}, in ${team.roomName}. Renown ${team.renown}, standing ${standingWord(team.standing)}, morale ${team.morale}.${move === 1 ? ' Moved up.' : move === -1 ? ' Moved down.' : ''} ${crew.map((c) => c.label).join('. ')}`,
   );
 
   function select(): void {
@@ -42,7 +52,7 @@
   type="button"
   onclick={select}
   aria-pressed={selected}
-  class="ink w-full rounded-md bg-panel px-3 py-2 text-left text-ink shadow-ink-sm transition-[box-shadow,border-color,transform] duration-150"
+  class="ink w-full rounded-md bg-panel px-2.5 py-1.5 text-left text-ink shadow-ink-sm transition-[box-shadow,border-color,transform] duration-150"
   class:opacity-50={dead}
   class:border-torch-400={selected}
   class:shadow-ink={selected}
@@ -51,15 +61,22 @@
 >
   <span class="sr-only">{summary}</span>
 
-  <div aria-hidden="true" class="flex items-center gap-2">
+  <div aria-hidden="true" class="flex items-center gap-1.5">
+    {#if rank > 0}
+      <span class="w-3 shrink-0 text-right font-mono text-body-sm {medal}">{rank}</span>
+    {/if}
     <span
       class="flex size-5 shrink-0 items-center justify-center rounded-sm border-2 border-ink-900 font-mono text-micro leading-none text-ink"
       style="background: {accent}">{team.monogram}</span
     >
     <h3 class="truncate font-display text-title leading-none" class:line-through={dead}>{team.name}</h3>
-    {#if selected}
-      <span class="shrink-0 rounded-full bg-ink-900 px-1.5 py-0.5 font-mono text-micro text-torch-300">
-        OPEN
+    {#if move !== 0}
+      <span
+        class="shrink-0 font-mono text-micro"
+        class:text-poison-700={move === 1}
+        class:text-blood-700={move === -1}
+      >
+        {move === 1 ? '▲' : '▼'}
       </span>
     {/if}
     <span class="ml-auto shrink-0 font-mono text-micro text-stone-600">F{team.floorId}</span>
@@ -67,11 +84,11 @@
 
   <p aria-hidden="true" class="mt-0.5 truncate text-micro text-stone-600 italic">{team.motto}</p>
 
-  <div aria-hidden="true" class="mt-1.5 grid grid-cols-6 gap-1">
+  <div aria-hidden="true" class="mt-1 grid grid-cols-6 gap-1">
     {#each crew as member (member.id)}
       <span class="block" title={member.label}>
         <span
-          class="flex h-4 items-center justify-center rounded-t-sm border border-ink-900/30 font-mono text-micro leading-none"
+          class="flex h-3.5 items-center justify-center rounded-t-sm border border-ink-900/30 font-mono text-micro leading-none"
           class:bg-parchment-200={member.alive}
           class:text-ink-800={member.alive}
           class:bg-stone-300={!member.alive}
@@ -90,28 +107,26 @@
     {/each}
   </div>
 
-  <div aria-hidden="true" class="mt-1.5 space-y-1">
-    <div class="h-2 overflow-hidden rounded-full border border-ink-900/20 bg-ink-900/10">
-      <div class="h-full {hpTone(hpPct)} transition-[width] duration-300" style="width: {hpPct}%"></div>
-    </div>
-    <div class="h-2 overflow-hidden rounded-full border border-ink-900/20 bg-ink-900/10">
-      <div class="h-full bg-arcane-400 transition-[width] duration-300" style="width: {team.morale}%"></div>
-    </div>
+  <div aria-hidden="true" class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink-900/15">
+    <div class="h-full {hpTone(hpPct)} transition-[width] duration-300" style="width: {hpPct}%"></div>
   </div>
 
-  <dl aria-hidden="true" class="mt-1.5 grid grid-cols-[auto_auto_1fr] gap-x-3 font-mono text-micro text-stone-700">
-    <div class="flex gap-1"><dt>REN</dt><dd class="text-torch-700">{team.renown}</dd></div>
-    <div class="flex gap-1">
-      <dt>STAND</dt>
-      <dd class:text-poison-700={team.standing > 0} class:text-blood-700={team.standing < 0}>
+  <p aria-hidden="true" class="mt-1 flex items-baseline gap-2 font-mono text-micro text-stone-600">
+    <span class="shrink-0 text-torch-700">{team.renown} <span class="text-stone-500">REN</span></span>
+    <span class="shrink-0">{coin(team.goldCp)}</span>
+    {#if shaken}
+      <span class="shrink-0 text-blood-700">MOR {team.morale}</span>
+    {/if}
+    {#if team.standing !== 0}
+      <span
+        class="ml-auto shrink-0"
+        class:text-poison-700={team.standing > 0}
+        class:text-blood-700={team.standing < 0}
+      >
         {team.standing > 0 ? '+' : ''}{team.standing}
-      </dd>
-    </div>
-    <div class="flex gap-1 truncate"><dt>GOLD</dt><dd class="truncate">{team.goldCp}</dd></div>
-    <div class="flex gap-1"><dt>MOR</dt><dd>{team.morale}</dd></div>
-    <div class="col-span-2 flex gap-1 truncate">
-      <dt>AT</dt>
-      <dd class="truncate">{team.roomName}</dd>
-    </div>
-  </dl>
+      </span>
+    {/if}
+  </p>
+
+  <p aria-hidden="true" class="truncate font-mono text-micro text-stone-500">{team.roomName}</p>
 </button>
