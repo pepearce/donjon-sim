@@ -1,7 +1,7 @@
 import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { nextRoomTowards } from '../../gen/apsp.js';
-import { generateFloor, roomSpot, tilePath } from '../../gen/floorgen.js';
+import { generateFloor, roomSpot, tilePath, walkWithin } from '../../gen/floorgen.js';
 import { MAX_FLOORS, floorOf, livingRoster, monstersIn } from '../world.js';
 import { doctrineFor, roomNoise } from './doctrine.js';
 import { traitFrac } from './traits.js';
@@ -22,6 +22,16 @@ function rivalRooms(world: World, team: Team, floor: Floor): Set<number> {
     taken.add(other.targetRoom);
   }
   return taken;
+}
+
+export function onStairs(floor: Floor, team: Team): boolean {
+  const stairs = floor.rooms[floor.stairsRoom];
+  return !!stairs && team.roomIdx === floor.stairsRoom && team.tileX === stairs.cx && team.tileY === stairs.cy;
+}
+
+export function atEntry(floor: Floor, team: Team): boolean {
+  const entry = floor.rooms[floor.entryRoom];
+  return !!entry && team.roomIdx === floor.entryRoom && team.tileX === entry.cx && team.tileY === entry.cy;
 }
 
 export function chooseDestination(world: World, team: Team, floor: Floor): number {
@@ -73,6 +83,14 @@ export function repath(world: World, team: Team, floor: Floor, destination: numb
   const step = nextRoomTowards(floor, floor.rooms.length, team.roomIdx, destination);
   const here: [number, number] = [team.tileX, team.tileY];
   const spot = roomSpot(floor, step, team.id, world.seed);
+
+  if (step === team.roomIdx) {
+    team.targetRoom = step;
+    team.path = walkWithin(floor, here, spot);
+    team.pathPos = 0;
+    return;
+  }
+
   let path = tilePath(floor, team.roomIdx, step, here, spot);
   if (step !== team.roomIdx && path.length === 0) {
     path = tilePath(floor, team.roomIdx, step, here);
@@ -132,7 +150,7 @@ function onArrival(world: World, team: Team, floor: Floor): void {
 
   if (room.state === 'cleared' && room.restockDueTick <= world.tick) scheduleRestock(world, room);
 
-  if (team.roomIdx === floor.stairsRoom) descend(world, team, floor);
+  if (onStairs(floor, team)) descend(world, team, floor);
 }
 
 export function descend(world: World, team: Team, floor: Floor): void {

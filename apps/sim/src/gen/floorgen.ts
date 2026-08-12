@@ -230,6 +230,7 @@ export function generateFloor(worldSeed: number, depth: number, tick: number): F
 export function roomSpot(floor: Floor, roomIdx: number, teamId: number, seed: number): [number, number] {
   const room = floor.rooms[roomIdx];
   if (!room) return [1, 1];
+  if (roomIdx === floor.stairsRoom || roomIdx === floor.entryRoom) return [room.cx, room.cy];
   if (room.w <= 1 || room.h <= 1) return [room.cx, room.cy];
 
   const h = mix32(seed ^ mix32(teamId * 0x9e3779b1 + floor.id * 0x85ebca6b + roomIdx * 0xc2b2ae35));
@@ -237,6 +238,28 @@ export function roomSpot(floor: Floor, roomIdx: number, teamId: number, seed: nu
   const y = room.y + (((h / 65536) | 0) % room.h);
   if (!isWalkable(floor, x, y)) return [room.cx, room.cy];
   return [x, y];
+}
+
+export function walkWithin(
+  floor: Floor,
+  from: [number, number],
+  to: [number, number],
+): Array<[number, number]> {
+  const path: Array<[number, number]> = [];
+  let x = from[0];
+  let y = from[1];
+  while (x !== to[0]) {
+    x += x < to[0] ? 1 : -1;
+    path.push([x, y]);
+  }
+  while (y !== to[1]) {
+    y += y < to[1] ? 1 : -1;
+    path.push([x, y]);
+  }
+  for (const [px, py] of path) {
+    if (!isWalkable(floor, px, py)) return [];
+  }
+  return path;
 }
 
 export function tilePath(

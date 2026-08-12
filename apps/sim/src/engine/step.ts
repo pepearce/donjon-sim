@@ -11,7 +11,7 @@ import {
   updateKeeperMood,
 } from './systems/dungeon.js';
 import { keeperAct } from './systems/keeper.js';
-import { advanceTeam, ascend, descend, repath } from './systems/movement.js';
+import { advanceTeam, ascend, atEntry, descend, onStairs, repath } from './systems/movement.js';
 import { decayRenown, rankTeams } from './systems/ranking.js';
 import { activeTeamCount, arrivals, formTeams, retireStragglers } from './systems/recruit.js';
 import { updateSurvivorRecord } from './systems/records.js';
@@ -96,7 +96,7 @@ function applyAction(world: World, team: Team): void {
     }
     case 'RETREAT':
       team.state = 'delving';
-      if (team.roomIdx === floor.entryRoom) {
+      if (atEntry(floor, team)) {
         if (floor.depth > 1) {
           ascend(world, team, floor);
         } else {
@@ -110,7 +110,7 @@ function applyAction(world: World, team: Team): void {
       return;
     case 'DESCEND':
       team.state = 'delving';
-      if (team.roomIdx === floor.stairsRoom) descend(world, team, floor);
+      if (onStairs(floor, team)) descend(world, team, floor);
       else travelTowards(world, team, floor, floor.stairsRoom);
       return;
     default:
