@@ -55,7 +55,6 @@ export class Hub {
   private snapshotBuffer(world: World): { seq: number; buffer: Buffer } {
     if (this.cachedSnapshot && this.cachedSnapshot.seq === this.seq) return this.cachedSnapshot;
     const snap = projectSnapshot(world, this.seq, this.speed);
-    this.lastSnapshot = snap;
     const buffer = Buffer.from(
       `event: snapshot\nid: ${this.seq}\ndata: ${JSON.stringify(snap)}\n\n`,
       'utf8',
