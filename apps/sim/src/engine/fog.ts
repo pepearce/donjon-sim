@@ -1,3 +1,4 @@
+import { forEachVisible, hasLineOfSight } from '@donjon/shared';
 import type { Floor, Team } from './types.js';
 
 export const SIGHT_TILES = 5;
@@ -12,21 +13,17 @@ export function bitsetFor(team: Team, floor: Floor): Uint8Array {
 
 export function markSeen(team: Team, floor: Floor, cx: number, cy: number, radius = SIGHT_TILES): void {
   const bits = bitsetFor(team, floor);
-  const r2 = radius * radius;
-  const minY = Math.max(0, cy - radius);
-  const maxY = Math.min(floor.height - 1, cy + radius);
-  const minX = Math.max(0, cx - radius);
-  const maxX = Math.min(floor.width - 1, cx + radius);
+  forEachVisible(floor.tiles, floor.width, floor.height, cx, cy, radius, (x, y) => {
+    const index = y * floor.width + x;
+    bits[index >> 3] = (bits[index >> 3] ?? 0) | (1 << (index & 7));
+  });
+}
 
-  for (let y = minY; y <= maxY; y++) {
-    const dy = y - cy;
-    for (let x = minX; x <= maxX; x++) {
-      const dx = x - cx;
-      if (dx * dx + dy * dy > r2) continue;
-      const index = y * floor.width + x;
-      bits[index >> 3] = (bits[index >> 3] ?? 0) | (1 << (index & 7));
-    }
-  }
+export function canSee(floor: Floor, ox: number, oy: number, x: number, y: number, radius = SIGHT_TILES): boolean {
+  const dx = x - ox;
+  const dy = y - oy;
+  if (dx * dx + dy * dy > radius * radius) return false;
+  return hasLineOfSight(floor.tiles, floor.width, floor.height, ox, oy, x, y);
 }
 
 export function hasSeen(team: Team, floor: Floor, x: number, y: number): boolean {
