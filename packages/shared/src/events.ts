@@ -47,6 +47,8 @@ export const EVENT_TYPES = [
   'HERO_ARC',
   'HERO_BLAST',
   'HERO_SKIM',
+  'STAFF_QUIT',
+  'KHAN_FORECLOSURE',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -76,6 +78,8 @@ export const SEVERITY: Record<EventType, Severity> = {
   HERO_ARC: 1,
   HERO_BLAST: 1,
   HERO_SKIM: 1,
+  STAFF_QUIT: 1,
+  KHAN_FORECLOSURE: 3,
   HERO_DOWN: 2,
   ROOM_CLEARED: 2,
   FLOOR_DESCEND: 2,

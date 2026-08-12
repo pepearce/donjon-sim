@@ -147,6 +147,7 @@ function initialDungeon(): DungeonState {
     scheme: null,
     keeperAct: { last: '', tick: 0, text: '', cooldowns: {} },
     records: [],
+    insolventDays: 0,
   };
 }
 
@@ -171,6 +172,7 @@ export function genesis(seed: number): World {
     initialCoinCp: 0,
     pendingEvents: [],
     tailRing: new RingBuffer<SimEvent>(500),
+    foreclosed: false,
   };
 
   world.floors.push(generateFloor(seed, 1, 0));

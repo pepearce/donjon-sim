@@ -3292,5 +3292,82 @@
   "requires": [],
   "text": "Pockets were audited",
   "fallback": true
+ },
+ {
+  "id": "staff_quit.00",
+  "type": "STAFF_QUIT",
+  "weight": 8,
+  "tone": [
+   "dry"
+  ],
+  "requires": [
+   "count"
+  ],
+  "text": "{count|num} of the staff walked out over the wage situation"
+ },
+ {
+  "id": "staff_quit.01",
+  "type": "STAFF_QUIT",
+  "weight": 6,
+  "tone": [
+   "absurd"
+  ],
+  "requires": [
+   "count"
+  ],
+  "text": "{count|num} resignations were filed, effective immediately and retroactively"
+ },
+ {
+  "id": "staff_quit.02",
+  "type": "STAFF_QUIT",
+  "weight": 6,
+  "tone": [
+   "grim"
+  ],
+  "requires": [
+   "count"
+  ],
+  "text": "The unpaid quarter cost the Keeper {count|num} of the staff"
+ },
+ {
+  "id": "staff_quit.fallback.00",
+  "type": "STAFF_QUIT",
+  "weight": 1,
+  "tone": [],
+  "requires": [],
+  "text": "Some of the staff stopped showing up",
+  "fallback": true
+ },
+ {
+  "id": "khan_foreclosure.00",
+  "type": "KHAN_FORECLOSURE",
+  "weight": 8,
+  "tone": [
+   "grim"
+  ],
+  "requires": [
+   "days",
+   "debtCp"
+  ],
+  "text": "After {days|num} days of insolvency the Grand Khan called in the {debtCp|num}cp and took the keys"
+ },
+ {
+  "id": "khan_foreclosure.01",
+  "type": "KHAN_FORECLOSURE",
+  "weight": 6,
+  "tone": [
+   "dry"
+  ],
+  "requires": [],
+  "text": "The Grand Khan foreclosed. The dungeon is under new management, which is to say the same management, elsewhere"
+ },
+ {
+  "id": "khan_foreclosure.fallback.00",
+  "type": "KHAN_FORECLOSURE",
+  "weight": 1,
+  "tone": [],
+  "requires": [],
+  "text": "The books closed for the last time",
+  "fallback": true
  }
 ]

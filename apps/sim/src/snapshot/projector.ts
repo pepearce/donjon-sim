@@ -310,6 +310,10 @@ export function describeEvent(
       return `${STR(payload['hero'])} opened the room with a charge, ${NUM(payload['damage'])} across ${NUM(payload['hit'])} of the staff`;
     case 'HERO_SKIM':
       return `${STR(payload['hero'])} skimmed ${NUM(payload['cp'])}cp off the ${STR(payload['monster'])}`;
+    case 'STAFF_QUIT':
+      return `${NUM(payload['count'])} of the staff walked off the job unpaid`;
+    case 'KHAN_FORECLOSURE':
+      return `The Grand Khan foreclosed on the dungeon after ${NUM(payload['days'])} days of insolvency, ${NUM(payload['debtCp'])}cp outstanding`;
     default:
       return `${type} ${JSON.stringify(payload)}`;
   }
@@ -522,7 +526,7 @@ export function projectSnapshot(world: World, seq: number, speed: number): Snaps
       day: dayOf(world.tick),
       watch: watchAt(world.tick),
       seed: world.seed,
-      status: 'running',
+      status: world.foreclosed ? 'foreclosed' : 'running',
     },
     floors: projectFloorIndex(world),
     teams: projectTeams(world),

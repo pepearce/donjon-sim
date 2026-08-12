@@ -1,3 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-export const EPOCH = randomUUID();
+export let EPOCH = randomUUID();
+
+export function rotateEpoch(): string {
+  EPOCH = randomUUID();
+  return EPOCH;
+}

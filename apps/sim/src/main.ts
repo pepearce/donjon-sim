@@ -1,6 +1,8 @@
 import { FLUSH_EVERY, dayOf, watchAt } from '@donjon/shared';
+import { mix32 } from '@donjon/shared';
 import { loadConfig } from './config.js';
-import { boot } from './db/boot.js';
+import { boot, wipeWorld } from './db/boot.js';
+import { rotateEpoch } from './epoch.js';
 import { Flusher } from './db/flush.js';
 import { migrate } from './db/migrate.js';
 import { openDb } from './db/open.js';
@@ -162,10 +164,36 @@ admin.listen(config.adminPort, '127.0.0.1', () => {
 let broadcastEvery = Math.max(1, Math.round(500 / (1000 / config.speed)));
 const heartbeat = setInterval(() => hub.heartbeat(), 10_000);
 
+function reforge(w: World): void {
+  const oldSeed = w.seed;
+  const oldTick = w.tick;
+  drain(w);
+  flusher.flush(w);
+  wipeWorld(db);
+
+  const nextSeed = mix32(oldSeed ^ (oldTick + 0x9e3779b9)) >>> 0;
+  const { world: fresh } = boot(db, nextSeed);
+  Object.assign(w, fresh);
+  printedThrough = 0;
+  hub.reset();
+  rotateEpoch();
+  drain(w);
+  flusher.flush(w);
+
+  log.info(
+    `foreclosure: world reforged at old tick=${oldTick}, ` +
+      `new seed=0x${nextSeed.toString(16)} floors=${w.floors.length} teams=${w.teams.length}`,
+  );
+}
+
 const loop = startLoop(world, {
   speed: config.speed,
   paused: () => paused,
   onTick: (w) => {
+    if (w.foreclosed) {
+      reforge(w);
+      return;
+    }
     drain(w);
     if (w.tick % FLUSH_EVERY === 1) flusher.flush(w);
     if (w.tick % broadcastEvery === 0) setImmediate(() => hub.broadcast(w));

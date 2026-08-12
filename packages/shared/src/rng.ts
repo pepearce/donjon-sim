@@ -36,6 +36,7 @@ export const RngDomain = {
   ACT_AID: 36,
   ACT_SHIELD: 37,
   ACT_ARC: 38,
+  STAFF_QUIT: 39,
 } as const;
 
 export type RngDomain = (typeof RngDomain)[keyof typeof RngDomain];

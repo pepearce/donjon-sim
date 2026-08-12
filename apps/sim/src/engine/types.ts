@@ -223,6 +223,7 @@ export interface DungeonState {
   scheme: KeeperScheme | null;
   keeperAct: KeeperActState;
   records: RecordEntry[];
+  insolventDays: number;
 }
 
 export interface World {
@@ -245,6 +246,7 @@ export interface World {
   initialCoinCp: number;
   pendingEvents: SimEvent[];
   tailRing: RingBuffer<SimEvent>;
+  foreclosed: boolean;
 }
 
 export function statMod(value: number): number {

@@ -92,6 +92,27 @@ function persistGenesis(db: Db, world: World, now: number): void {
   });
 }
 
+export function wipeWorld(db: Db): void {
+  const wipe = db.transaction(() => {
+    for (const table of [
+      'events',
+      'wakes',
+      'tavern',
+      'items',
+      'monsters',
+      'heroes',
+      'teams',
+      'rooms',
+      'floors',
+      'dungeon',
+      'world',
+    ]) {
+      db.prepare(`DELETE FROM ${table}`).run();
+    }
+  });
+  wipe();
+}
+
 export function boot(db: Db, seed: number): { world: World; report: BootReport } {
   const now = Date.now();
   const row = db.prepare('SELECT * FROM world WHERE id = 1').get() as WorldRow | undefined;
@@ -306,6 +327,7 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
           ...(parseObject<KeeperActState>(dungeonRow['keeper_act']) ?? {}),
         },
         records: parseArray<RecordEntry>(dungeonRow['records']),
+        insolventDays: 0,
       };
     }
 

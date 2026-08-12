@@ -1,6 +1,6 @@
-import { DAY_TICKS, applyBp } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, applyBp, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { circulatingCoin, floorOf, roster } from '../world.js';
+import { circulatingCoin, floorOf, monstersIn, roster } from '../world.js';
 import { adjustStanding, creditTollScheme } from './dungeon.js';
 import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
@@ -81,13 +81,60 @@ export function bankLoot(world: World, team: Team): void {
   setRecord(world, 'toll', 'largest single toll', toll, team.name, team);
 }
 
+export const FORECLOSE_DAYS = 5;
+const QUIT_CHANCE = 0.3;
+const GUARDIAN_QUIT_CHANCE = 0.1;
+const INSOLVENT_TREASURY_CP = 5_000;
+
+function staffQuits(world: World): void {
+  let gone = 0;
+  for (const monster of world.monsters) {
+    if (!monster.alive) continue;
+    const rng = rngFor(world.seed, world.tick, RngDomain.STAFF_QUIT, monster.id);
+    if (!rng.chance(monster.guardian ? GUARDIAN_QUIT_CHANCE : QUIT_CHANCE)) continue;
+    monster.alive = false;
+    monster.hp = 0;
+    gone += 1;
+  }
+  if (gone === 0) return;
+
+  for (const floor of world.floors) {
+    for (const room of floor.rooms) {
+      if (room.state !== 'stocked') continue;
+      if (monstersIn(world, floor.id, room.idx).length > 0) continue;
+      room.state = 'cleared';
+      room.restockDueTick = world.tick;
+    }
+  }
+
+  emit(world, { type: 'STAFF_QUIT', payload: { count: gone } });
+}
+
+function trackInsolvency(world: World): void {
+  const d = world.dungeon;
+  if (d.treasuryCp < INSOLVENT_TREASURY_CP && d.loanCp > 0) d.insolventDays += 1;
+  else d.insolventDays = 0;
+
+  if (d.insolventDays >= FORECLOSE_DAYS && !world.foreclosed) {
+    world.foreclosed = true;
+    emit(world, {
+      type: 'KHAN_FORECLOSURE',
+      payload: { days: d.insolventDays, debtCp: d.loanCp },
+    });
+  }
+}
+
 export function dailyUpkeep(world: World): void {
   let wages = 0;
   for (const monster of world.monsters) {
     if (!monster.alive) continue;
     wages += monster.wageCpPerDay;
   }
-  if (world.dungeon.austerity) wages = 0;
+  if (world.dungeon.austerity) {
+    wages = 0;
+    staffQuits(world);
+  }
+  trackInsolvency(world);
 
   const paid = Math.min(world.dungeon.treasuryCp, wages);
   world.dungeon.treasuryCp -= paid;

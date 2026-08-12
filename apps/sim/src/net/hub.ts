@@ -156,6 +156,13 @@ export class Hub {
     for (const client of this.clients.values()) client.res.write(': hb\n\n');
   }
 
+  reset(): void {
+    this.ring.length = 0;
+    this.lastSnapshot = null;
+    this.cachedSnapshot = null;
+    this.stats.ringSize = 0;
+  }
+
   closeAll(): void {
     for (const client of this.clients.values()) {
       client.res.write('event: bye\ndata: {"reason":"shutdown"}\n\n');
