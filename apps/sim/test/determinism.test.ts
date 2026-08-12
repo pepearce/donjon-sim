@@ -3,7 +3,7 @@ import { rngFor } from '@donjon/shared';
 import { step } from '../src/engine/step.js';
 import { newWorld } from '../src/engine/setup.js';
 import { circulatingCoin, worldDigest } from '../src/engine/world.js';
-import { TILE_DOOR, TILE_FLOOR, TILE_RUBBLE, TILE_STAIRS, TILE_WALL, type World } from '../src/engine/types.js';
+import { TILE_WALL, isWalkable, type World } from '../src/engine/types.js';
 import { generateFloor, tilePath } from '../src/gen/floorgen.js';
 
 const SEED = 0xd0f0a;
@@ -83,8 +83,7 @@ describe('floor generation', () => {
     const w = newWorld(SEED);
     for (const floor of w.floors) {
       for (const room of floor.rooms) {
-        const tile = floor.tiles[room.cy * floor.width + room.cx];
-        expect([TILE_FLOOR, TILE_STAIRS, TILE_DOOR, TILE_RUBBLE]).toContain(tile);
+        expect(isWalkable(floor, room.cx, room.cy)).toBe(true);
       }
       const n = floor.rooms.length;
       for (let i = 0; i < n; i++) {

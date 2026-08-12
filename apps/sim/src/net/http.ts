@@ -1,7 +1,8 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { PROTOCOL_VERSION, TICK_MS, type BootstrapDTO } from '@donjon/shared';
 import { SIM_VERSION } from '../db/boot.js';
+import { EPOCH } from '../epoch.js';
 import { encodeFog } from '../engine/fog.js';
 import {
   projectFloorIndex,
@@ -13,7 +14,7 @@ import {
 import type { Hub } from './hub.js';
 import type { World } from '../engine/world.js';
 
-export const EPOCH = randomUUID();
+export { EPOCH };
 
 export interface HttpDeps {
   world: World;

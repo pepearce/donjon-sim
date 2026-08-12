@@ -90,6 +90,13 @@ export class SimStore {
   }
 
   applySnapshot(snap: SnapshotDTO): void {
+    if (snap.epoch && this.epoch !== '' && snap.epoch !== this.epoch) {
+      this.floorMap = null;
+      this.fog = null;
+      this.sight = [];
+      this.fogTiles = {};
+    }
+    if (snap.epoch) this.epoch = snap.epoch;
     this.tick = snap.tick;
     this.day = snap.world.day;
     this.watch = snap.world.watch;

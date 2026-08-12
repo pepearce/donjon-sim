@@ -33,6 +33,7 @@
   let loadedFloor = $state(0);
   let loadRequest = $state(0);
   let followedFloor = $state<number | null>(null);
+  let mapEpoch = $state('');
   let reducedMotion = $state(false);
   let viewMoved = $state(false);
 
@@ -189,6 +190,18 @@
       mapCache.clear();
       renderer = null;
     };
+  });
+
+  $effect(() => {
+    const epoch = sim.epoch;
+    if (epoch === '' || epoch === mapEpoch) return;
+    const first = mapEpoch === '';
+    mapEpoch = epoch;
+    if (first) return;
+    mapCache.clear();
+    tilesCacheKey = '';
+    tilesCache = null;
+    loadedFloor = 0;
   });
 
   $effect(() => {

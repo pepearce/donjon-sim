@@ -107,7 +107,34 @@ export class MapRenderer {
   private seenTiles: Uint8Array | null = null;
   private mapTiles: Uint8Array | null = null;
 
+  private readonly wallProbe =
+    typeof location !== 'undefined' && location.search.includes('wallcheck');
+  private readonly probed = new Map<number, string>();
+
   constructor(private readonly canvas: HTMLCanvasElement) {}
+
+  private probeWall(map: FloorMapDTO, token: TokenPublic, pos: { x: number; y: number }): void {
+    const tiles = this.mapTiles;
+    if (!tiles) return;
+    const at = (x: number, y: number): number => {
+      const ix = Math.round(x);
+      const iy = Math.round(y);
+      if (ix < 0 || iy < 0 || ix >= map.width || iy >= map.height) return TILE_WALL;
+      return tiles[iy * map.width + ix] ?? TILE_WALL;
+    };
+    const drawn = at(pos.x, pos.y);
+    const raw = at(token.x, token.y);
+    const key = `${drawn === TILE_WALL ? 1 : 0}${raw === TILE_WALL ? 1 : 0}`;
+    if (this.probed.get(token.id) === key) return;
+    this.probed.set(token.id, key);
+    if (drawn !== TILE_WALL && raw !== TILE_WALL) return;
+    console.warn(
+      `[wallcheck] token=${token.id} token.floorId=${token.floorId} map.id=${map.id} ` +
+        `drawn=(${pos.x.toFixed(2)},${pos.y.toFixed(2)}) tile=${drawn} ` +
+        `raw=(${token.x},${token.y}) tile=${raw} ` +
+        `interp=${this.positionSource ? 'on' : 'off'} tiles=${tiles.length} wh=${map.width}x${map.height}`,
+    );
+  }
 
   setFog(
     rooms: Set<number> | null,
@@ -152,7 +179,7 @@ export class MapRenderer {
   setMap(map: FloorMapDTO): void {
     this.map = map;
     this.mapTiles = decodeTiles(map.tiles);
-    const key = `${map.id}:${map.width}x${map.height}`;
+    const key = `${map.id}:${map.width}x${map.height}:${map.tiles}`;
     if (key !== this.terrainKey) {
       this.terrainKey = key;
       this.terrain = rasteriseTerrain(map, this.mapTiles);
@@ -642,6 +669,7 @@ export class MapRenderer {
 
     for (const token of this.tokens) {
       const pos = this.tokenPosition(token);
+      if (this.wallProbe) this.probeWall(map, token, pos);
       const cx = offsetX + (pos.x + 0.5) * tilePx;
       const cy = offsetY + (pos.y + 0.5) * tilePx;
       if (cx < -tilePx || cy < -tilePx || cx > cw + tilePx || cy > ch + tilePx) continue;
