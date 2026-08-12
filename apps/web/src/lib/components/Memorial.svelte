@@ -1,24 +1,61 @@
 <script lang="ts">
+  import { DAY_TICKS } from '@donjon/shared';
   import { useSim } from '../store.svelte.js';
 
   const sim = useSim();
+
+  const epithets = $derived.by(() => {
+    const map = new Map<number, string>();
+    for (const team of sim.teams) {
+      for (const hero of team.heroes) {
+        if (hero.epithet) map.set(hero.id, hero.epithet);
+      }
+    }
+    return map;
+  });
+
+  const causes = $derived.by(() => {
+    const map = new Map<number, string>();
+    for (const e of sim.ticker) {
+      if (e.heroId === null || e.type !== 'HERO_DEATH') continue;
+      map.set(e.heroId, e.text);
+    }
+    return map;
+  });
 </script>
 
-<section class="flex min-h-0 flex-col border-t-2 border-ink-900" aria-label="Hero memorial">
+<section class="flex h-full min-h-0 flex-col border-t-2 border-ink-900" aria-label="Hero memorial">
   <h2 class="flex shrink-0 items-baseline justify-between border-b-2 border-ink-900 px-3 py-1.5">
     <span class="text-label text-parchment-300">THE FALLEN</span>
-    <span class="font-mono text-body-sm text-blood-300">{sim.casualties}</span>
+    <span class="font-mono text-num tabular text-blood-300">{sim.casualties}</span>
   </h2>
   <ul class="min-h-0 flex-1 overflow-y-auto px-3 py-1">
     {#each sim.memorial as hero (hero.id)}
-      <li class="border-b border-ink-900/40 py-1 last:border-0">
-        <div class="flex items-baseline gap-1.5">
-          <span aria-hidden="true" class="text-stone-500">†</span>
-          <span class="truncate text-body-sm text-parchment-200">{hero.name}</span>
-        </div>
-        <p class="pl-4 font-mono text-micro text-stone-500">
-          L{hero.level} {hero.className} · {hero.kills} kills · {hero.teamName}
+      {@const epithet = epithets.get(hero.id)}
+      {@const cause = causes.get(hero.id)}
+      <li class="border-b border-ink-900/40 py-1.5 last:border-0">
+        <p class="flex items-baseline gap-1.5">
+          <span aria-hidden="true" class="shrink-0 text-blood-400">†</span>
+          <span class="truncate font-display text-body text-parchment-100">{hero.name}</span>
+          {#if epithet}
+            <span class="truncate text-micro text-torch-300 italic">{epithet}</span>
+          {/if}
+          <span class="ml-auto shrink-0 font-mono text-micro text-stone-600">
+            DAY {Math.floor(hero.diedTick / DAY_TICKS)}
+          </span>
         </p>
+        <p class="pl-4 font-mono text-micro tabular text-stone-500">
+          L{hero.level}
+          <span class="text-stone-400">{hero.species} {hero.className}</span>
+          · {hero.kills}
+          {hero.kills === 1 ? 'kill' : 'kills'}
+        </p>
+        <p class="truncate pl-4 text-micro text-stone-500">{hero.teamName}</p>
+        {#if cause}
+          <p class="mt-0.5 line-clamp-2 border-l-2 border-blood-700 pl-2 text-micro text-stone-400 italic">
+            {cause}
+          </p>
+        {/if}
       </li>
     {:else}
       <li class="py-4 text-center text-body-sm text-stone-500">Nobody has died yet. Give it time.</li>

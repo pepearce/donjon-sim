@@ -17,14 +17,14 @@
           ? 'text-rank-gold'
           : tone === 'keeper'
             ? 'text-arcane-300'
-            : 'text-parchment-100',
+            : 'text-parchment-50',
   );
 </script>
 
-<div class="flex min-w-[112px] flex-col gap-0.5">
-  <span class="text-micro text-stone-400">{label}</span>
-  <span class="font-mono text-stat leading-none {toneClass}">{value}</span>
+<div class="flex min-w-[104px] shrink-0 flex-col justify-center">
+  <span class="truncate font-mono text-micro leading-none text-stone-500">{label}</span>
+  <span class="mt-1.5 font-mono text-stat leading-none tabular {toneClass}">{value}</span>
   {#if hint}
-    <span class="text-micro text-stone-500">{hint}</span>
+    <span class="mt-1.5 truncate text-micro leading-none text-stone-600">{hint}</span>
   {/if}
 </div>
