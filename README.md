@@ -9,6 +9,23 @@ memorial to the fallen.
 The simulation runs independently of any browser. Zero LLM calls at runtime — all prose comes
 from a deterministic template engine over hand-authored content packs.
 
+## The heroes have opinions
+
+A hero carries up to two traits that steer real decisions rather than decorating a card. A
+craven party breaks earlier and a bold one later; the greedy hero takes the loot; the vengeful
+one goes for its nemesis; the cautious one scouts the trap; the loyal and the pious are the
+reason anyone gets dragged back from bleeding out.
+
+Nemeses are keyed on the monster's *name*, never its id — monsters are recreated with fresh
+ids on every restock, so an id would dangle within the hour. Relations accumulate between
+heroes: rescuing someone builds a bond, abandoning them while they bleed builds a grudge, and
+both feed back into grief, morale and who is willing to walk into the dark together again.
+Bonds are common and grudges are rare, which is the correct ratio for a workplace.
+
+Teams keep a history and a standing with the Keeper. The Keeper runs named schemes against
+whoever is winning, and a records board tracks what the dungeon has not seen before. Rooms
+earn reputations from the deaths they have swallowed.
+
 ## Run it
 
 ```bash
