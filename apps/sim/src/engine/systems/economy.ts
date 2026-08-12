@@ -3,6 +3,7 @@ import { emit } from '../emit.js';
 import { keeperLine } from '../keeperLines.js';
 import { circulatingCoin, floorOf, monstersIn, roster } from '../world.js';
 import { adjustStanding, creditTollScheme } from './dungeon.js';
+import { creditTollGambit } from './gambit.js';
 import { rungOf, updateStandingDaily } from './standing.js';
 import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
@@ -43,9 +44,12 @@ export function bankLoot(world: World, team: Team): void {
   const toll = applyBp(carried, world.dungeon.tollBp);
   const circulating = circulatingCoin(world);
   const khan = applyBp(carried, khanTaxBp(circulating));
+  const skim = rungOf(world.dungeon.standing) === 'overseer' ? Math.floor(toll * 0.2) : 0;
+  const kept = toll - skim;
 
-  world.dungeon.treasuryCp += toll;
-  world.dungeon.sinkCp += khan;
+  world.dungeon.treasuryCp += kept;
+  world.dungeon.sinkCp += khan + skim;
+  creditTollGambit(world, kept);
 
   const net = carried - toll - khan;
   const crew = roster(world, team).filter((h) => h.state !== 'dead');
@@ -62,7 +66,7 @@ export function bankLoot(world: World, team: Team): void {
   emit(world, {
     type: 'TOLL_PAID',
     teamId: team.id,
-    payload: { team: team.name, carriedCp: carried, tollCp: toll, khanCp: khan },
+    payload: { team: team.name, carriedCp: carried, tollCp: toll, khanCp: khan, skimCp: skim },
   });
 
   const floor = floorOf(world, team.floorId);

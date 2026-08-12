@@ -10,6 +10,7 @@ import {
   updateFameAndNotoriety,
   updateKeeperMood,
 } from './systems/dungeon.js';
+import { maybeDeclareGambit, tickGambit } from './systems/gambit.js';
 import { keeperAct } from './systems/keeper.js';
 import { advanceTeam, ascend, atEntry, descend, onStairs, repath } from './systems/movement.js';
 import { decayRenown, rankTeams } from './systems/ranking.js';
@@ -213,12 +214,14 @@ export function step(world: World): void {
     resolveLoan(world);
     updateKeeperMood(world);
     tickScheme(world);
+    tickGambit(world);
   }
 
   if (world.tick % DAY_TICKS === 0) {
     dailyUpkeep(world);
     updateAggression(world, world.dungeon.heroesSlain, Math.max(1, activeTeamCount(world)));
     keeperAct(world);
+    maybeDeclareGambit(world);
     updateSurvivorRecord(world);
   }
 }
