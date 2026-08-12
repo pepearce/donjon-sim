@@ -183,6 +183,13 @@ export interface KeeperScheme {
   outcome: string;
 }
 
+export interface KeeperActState {
+  last: string;
+  tick: number;
+  text: string;
+  cooldowns: Record<string, number>;
+}
+
 export interface RecordEntry {
   kind: string;
   label: string;
@@ -210,6 +217,7 @@ export interface DungeonState {
   mintedCp: number;
   sinkCp: number;
   scheme: KeeperScheme | null;
+  keeperAct: KeeperActState;
   records: RecordEntry[];
 }
 

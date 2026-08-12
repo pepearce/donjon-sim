@@ -4,14 +4,13 @@ import { attemptStabilise, resolveCombatRound } from './systems/combat.js';
 import { resolveBleedOut, sweepCorpse } from './systems/death.js';
 import { bankLoot, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
 import {
-  issueDecree,
-  maybeStartScheme,
   resolveLoan,
   tickScheme,
   updateAggression,
   updateFameAndNotoriety,
   updateKeeperMood,
 } from './systems/dungeon.js';
+import { keeperAct } from './systems/keeper.js';
 import { advanceTeam, ascend, descend, repath } from './systems/movement.js';
 import { decayRenown, rankTeams } from './systems/ranking.js';
 import { activeTeamCount, arrivals, formTeams, retireStragglers } from './systems/recruit.js';
@@ -196,8 +195,7 @@ export function step(world: World): void {
   if (world.tick % DAY_TICKS === 0) {
     dailyUpkeep(world);
     updateAggression(world, world.dungeon.heroesSlain, Math.max(1, activeTeamCount(world)));
-    issueDecree(world);
+    keeperAct(world);
     updateSurvivorRecord(world);
-    maybeStartScheme(world);
   }
 }

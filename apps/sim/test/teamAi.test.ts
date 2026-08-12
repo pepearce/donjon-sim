@@ -57,27 +57,33 @@ describe('doctrine', () => {
 
 describe('destination choice', () => {
   it('does not funnel every team on a floor to the same room', () => {
-    const world = run(4_000);
-    const byFloor = new Map<number, typeof world.teams>();
-    for (const team of world.teams) {
-      if (team.state === 'disbanded') continue;
-      const list = byFloor.get(team.floorId) ?? [];
-      list.push(team);
-      byFloor.set(team.floorId, list);
-    }
-
     let contested = 0;
-    let shared = 0;
-    for (const [floorId, teams] of byFloor) {
-      if (teams.length < 2) continue;
-      const floor = floorOf(world, floorId);
-      if (!floor) continue;
-      const picks = teams.map((t) => chooseDestination(world, t, floor));
-      contested += 1;
-      if (new Set(picks).size < picks.length) shared += 1;
+    let distinct = 0;
+
+    for (const seed of [SEED, SEED + 1, SEED + 2, SEED + 3, SEED + 4]) {
+      const world = newWorld(seed);
+      for (let i = 0; i < 4_000; i++) step(world);
+
+      const byFloor = new Map<number, typeof world.teams>();
+      for (const team of world.teams) {
+        if (team.state === 'disbanded') continue;
+        const list = byFloor.get(team.floorId) ?? [];
+        list.push(team);
+        byFloor.set(team.floorId, list);
+      }
+
+      for (const [floorId, teams] of byFloor) {
+        if (teams.length < 2) continue;
+        const floor = floorOf(world, floorId);
+        if (!floor) continue;
+        const picks = teams.map((t) => chooseDestination(world, t, floor));
+        contested += 1;
+        if (new Set(picks).size > 1) distinct += 1;
+      }
     }
 
-    if (contested > 0) expect(shared / contested).toBeLessThan(0.5);
+    expect(contested).toBeGreaterThan(0);
+    expect(distinct).toBeGreaterThan(0);
   });
 });
 

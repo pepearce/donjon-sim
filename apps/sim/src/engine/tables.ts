@@ -249,6 +249,107 @@ export const GUARDIAN_NAMES: GuardianNameRow[] = [
   { name: 'Lastcandle', title: 'Overseer of Closing Hours' },
 ];
 
+export interface KeeperActionDef {
+  id: string;
+  text: string;
+  costCp: number;
+  reserveCp: number;
+  cooldownDays: number;
+  weights: Record<string, number>;
+  tollBp?: number;
+  entryFeeCp?: number;
+  corpseTaxBp?: number;
+}
+
+export const KEEPER_ACTIONS: KeeperActionDef[] = [
+  {
+    id: 'toll_up',
+    text: 'tolls doubled until further notice',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 2,
+    weights: { bankrupt: 3, panicked: 0, greedy: 4, content: 1 },
+    tollBp: 3000,
+  },
+  {
+    id: 'toll_cut',
+    text: 'tolls eased, for the look of the thing',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 2,
+    weights: { bankrupt: 0, panicked: 2, greedy: 0, content: 1 },
+    tollBp: 1000,
+  },
+  {
+    id: 'entry_waive',
+    text: 'entry fee waived for the brave',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 3,
+    weights: { bankrupt: 0, panicked: 4, greedy: 0, content: 0 },
+    entryFeeCp: 0,
+  },
+  {
+    id: 'marketing',
+    text: 'a recruitment drive in the villages',
+    costCp: 2000,
+    reserveCp: 0,
+    cooldownDays: 2,
+    weights: { bankrupt: 0, panicked: 3, greedy: 0, content: 2 },
+    entryFeeCp: 100,
+  },
+  {
+    id: 'corpse_tax_up',
+    text: 'corpse tax raised, effective immediately',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 3,
+    weights: { bankrupt: 3, panicked: 0, greedy: 3, content: 0 },
+    corpseTaxBp: 9500,
+  },
+  {
+    id: 'corpse_tax_cut',
+    text: 'a widow’s share restored to the fallen',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 3,
+    weights: { bankrupt: 0, panicked: 1, greedy: 0, content: 1 },
+    corpseTaxBp: 6000,
+  },
+  {
+    id: 'hire_guardian',
+    text: 'a guardian engaged on the usual terms',
+    costCp: 0,
+    reserveCp: 40_000,
+    cooldownDays: 1,
+    weights: { bankrupt: 0, panicked: 1, greedy: 3, content: 3 },
+  },
+  {
+    id: 'open_scheme',
+    text: 'a private agenda opened against the leaders',
+    costCp: 1500,
+    reserveCp: 0,
+    cooldownDays: 1,
+    weights: { bankrupt: 1, panicked: 2, greedy: 3, content: 2 },
+  },
+  {
+    id: 'austerity',
+    text: 'all guardians to work unpaid this quarter',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 3,
+    weights: { bankrupt: 5, panicked: 1, greedy: 0, content: 0 },
+  },
+  {
+    id: 'observe',
+    text: 'watched the ledger and did nothing',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 0,
+    weights: { bankrupt: 1, panicked: 1, greedy: 1, content: 1 },
+  },
+];
+
 export const TRAP_NAMES = [
   'a spring-loaded invoice',
   'a collapsing shelf of ledgers',

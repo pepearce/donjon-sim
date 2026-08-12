@@ -321,6 +321,14 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 6,
+  name: 'keeper-agent-loop',
+  up(db) {
+    db.exec("ALTER TABLE dungeon ADD COLUMN keeper_act TEXT NOT NULL DEFAULT '{}'");
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;

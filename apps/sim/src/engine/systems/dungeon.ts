@@ -9,14 +9,6 @@ const SCHEME_KINDS = ['bankrupt', 'blood_quota', 'stop_descent', 'toll_harvest']
 const SCHEME_DAYS = 3;
 const SCHEME_FLOOR_BOOST = 1.15;
 const SCHEME_STANDING_FLOOR = -60;
-const DECREES = [
-  { id: 'tolls_doubled', text: 'tolls doubled until further notice', tollBp: 3000 },
-  { id: 'entry_fee_waived', text: 'entry fee waived for the brave', entryFeeCp: 0 },
-  { id: 'corpse_tax_raised', text: 'corpse tax raised, effective immediately', corpseTaxBp: 9500 },
-  { id: 'marketing_push', text: 'a recruitment drive in the villages', entryFeeCp: 100 },
-  { id: 'austerity_notice', text: 'all guardians to work unpaid this quarter', tollBp: 2200 },
-  { id: 'discount_week', text: 'half-price delving week', entryFeeCp: 250 },
-];
 
 export function updateFameAndNotoriety(world: World): void {
   const d = world.dungeon;
@@ -199,15 +191,3 @@ export function creditTollScheme(world: World, tollCp: number): void {
   scheme.progress += tollCp;
 }
 
-export function issueDecree(world: World): void {
-  if (world.tick % (DAY_TICKS * 2) !== 0) return;
-  const rng = rngFor(world.seed, world.tick, RngDomain.DECREE, 0);
-  const decree = rng.pick(DECREES);
-  const d = world.dungeon;
-
-  if (decree.tollBp !== undefined) d.tollBp = decree.tollBp;
-  if (decree.entryFeeCp !== undefined) d.entryFeeCp = decree.entryFeeCp;
-  if (decree.corpseTaxBp !== undefined) d.corpseTaxBp = decree.corpseTaxBp;
-
-  emit(world, { type: 'KEEPER_DECREE', payload: { decree: decree.id, text: decree.text } });
-}

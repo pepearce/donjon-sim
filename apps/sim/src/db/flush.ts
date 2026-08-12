@@ -99,10 +99,11 @@ export class Flusher {
         INSERT INTO dungeon (id, treasury_cp, loan_cp, austerity, aggression_milli,
           lethality_ema_milli, revenue_ema_cp, fame_milli, notoriety_milli, entry_fee_cp, toll_bp,
           corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, minted_cp, sink_cp,
-          scheme, records)
+          scheme, keeper_act, records)
         VALUES (1, @treasuryCp, @loanCp, @austerity, @aggressionMilli, @lethalityEmaMilli,
           @revenueEmaCp, @fameMilli, @notorietyMilli, @entryFeeCp, @tollBp, @corpseTaxBp,
-          @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp, @scheme, @records)
+          @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp, @scheme, @keeperAct,
+          @records)
         ON CONFLICT(id) DO UPDATE SET
           treasury_cp = excluded.treasury_cp, loan_cp = excluded.loan_cp,
           austerity = excluded.austerity, aggression_milli = excluded.aggression_milli,
@@ -112,7 +113,8 @@ export class Flusher {
           corpse_tax_bp = excluded.corpse_tax_bp,
           keeper_mood = excluded.keeper_mood, heroes_slain = excluded.heroes_slain,
           corpse_yield_cp = excluded.corpse_yield_cp, minted_cp = excluded.minted_cp,
-          sink_cp = excluded.sink_cp, scheme = excluded.scheme, records = excluded.records
+          sink_cp = excluded.sink_cp, scheme = excluded.scheme, keeper_act = excluded.keeper_act,
+          records = excluded.records
       `),
       clearTavern: db.prepare('DELETE FROM tavern'),
       tavern: db.prepare('INSERT INTO tavern (hero_id) VALUES (?)'),
@@ -296,6 +298,7 @@ export class Flusher {
         mintedCp: Math.round(d.mintedCp),
         sinkCp: Math.round(d.sinkCp),
         scheme: JSON.stringify(d.scheme ?? null),
+        keeperAct: JSON.stringify(d.keeperAct ?? {}),
         records: JSON.stringify(d.records ?? []),
       });
 

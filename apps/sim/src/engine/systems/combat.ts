@@ -35,6 +35,10 @@ function roll(rng: Rng, count: number, sides: number): number {
   return total;
 }
 
+export function wageForCr(cr: number): number {
+  return Math.round(12 * cr ** 1.25);
+}
+
 export function monsterFromCr(world: World, name: string, cr: number, roomId: number, floorId: number, guardian: boolean): Monster {
   const hpMax = Math.round(8 + 7 * cr);
   return {
@@ -49,7 +53,7 @@ export function monsterFromCr(world: World, name: string, cr: number, roomId: nu
     dmgSides: 3 + Math.min(Math.round(cr), 6),
     dmgBonus: Math.floor(cr / 2),
     xp: Math.round(45 * cr ** 1.4),
-    wageCpPerDay: Math.round(12 * cr ** 1.25),
+    wageCpPerDay: wageForCr(cr),
     roomId,
     floorId,
     guardian,

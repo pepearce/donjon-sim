@@ -1,4 +1,4 @@
-import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, applyBp, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { floorOf, heroById, itemsOf, livingRoster, roster, teamById } from '../world.js';
 import { adjustStanding } from './dungeon.js';
@@ -45,6 +45,14 @@ export function resolveBleedOut(world: World, heroId: number): void {
 }
 
 export function killHero(world: World, hero: Hero): void {
+  const bearers =
+    hero.teamId === null
+      ? 0
+      : (teamById(world, hero.teamId)?.roster ?? []).reduce(
+          (n, id) => n + (heroById(world, id)?.state !== 'dead' ? 1 : 0),
+          0,
+        );
+
   hero.state = 'dead';
   hero.hp = 0;
   hero.diedTick = world.tick;
@@ -55,6 +63,9 @@ export function killHero(world: World, hero: Hero): void {
   const team = hero.teamId === null ? undefined : teamById(world, hero.teamId);
   if (team) {
     const crew = livingRoster(world, team);
+    const share = Math.floor(team.carriedCp / Math.max(1, bearers));
+    team.carriedCp -= share;
+    hero.goldCp += share;
     const grief = griefMultiplier(crew, hero.id);
     team.morale = clamp(0, 100, team.morale - Math.round(20 * grief) - 3 * traitCount(crew, 'superstitious'));
     team.renownMilli = Math.max(0, team.renownMilli - 60 * 1000);
@@ -117,12 +128,19 @@ export function sweepCorpse(world: World, heroId: number): void {
   const salvaged = Math.floor(0.6 * gearValue);
   const purse = hero.goldCp;
 
-  world.dungeon.treasuryCp += purse + salvaged;
+  const estate = purse + salvaged;
+  const tax = applyBp(estate, world.dungeon.corpseTaxBp);
+  const crew = hero.teamId === null ? undefined : teamById(world, hero.teamId);
+  const widowed = crew && crew.state !== 'disbanded' ? crew : undefined;
+  const widow = estate - tax;
+
+  world.dungeon.treasuryCp += widowed ? tax : estate;
   world.dungeon.mintedCp += salvaged;
-  world.dungeon.corpseYieldCp += purse + salvaged;
+  world.dungeon.corpseYieldCp += widowed ? tax : estate;
+  if (widowed) widowed.goldCp += widow;
   hero.goldCp = 0;
 
-  const recovered = purse + salvaged;
+  const recovered = widowed ? tax : estate;
   const burned = gearValue - salvaged;
 
   for (const item of gear) {
@@ -138,7 +156,14 @@ export function sweepCorpse(world: World, heroId: number): void {
     type: 'CORPSE_TAX_LEVIED',
     heroId: hero.id,
     teamId: hero.teamId,
-    payload: { hero: hero.name, recoveredCp: recovered, burnedCp: burned },
+    payload: {
+      hero: hero.name,
+      recoveredCp: recovered,
+      burnedCp: burned,
+      estateCp: estate,
+      taxCp: recovered,
+      widowCp: widowed ? widow : 0,
+    },
   });
 }
 

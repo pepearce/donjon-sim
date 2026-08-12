@@ -8,6 +8,7 @@ import { generateFloor } from '../gen/floorgen.js';
 import type {
   Hero,
   Item,
+  KeeperActState,
   KeeperScheme,
   Monster,
   RecordEntry,
@@ -297,6 +298,13 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         mintedCp: Number(dungeonRow['minted_cp']),
         sinkCp: Number(dungeonRow['sink_cp']),
         scheme: parseObject<KeeperScheme>(dungeonRow['scheme']),
+        keeperAct: {
+          last: '',
+          tick: 0,
+          text: '',
+          cooldowns: {},
+          ...(parseObject<KeeperActState>(dungeonRow['keeper_act']) ?? {}),
+        },
         records: parseArray<RecordEntry>(dungeonRow['records']),
       };
     }

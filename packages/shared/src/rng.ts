@@ -32,6 +32,7 @@ export const RngDomain = {
   TEAM_DOCTRINE: 32,
   TEAM_DEST: 33,
   TEAM_ROOMSPOT: 34,
+  KEEPER: 35,
 } as const;
 
 export type RngDomain = (typeof RngDomain)[keyof typeof RngDomain];

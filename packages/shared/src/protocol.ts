@@ -162,6 +162,9 @@ export interface KeeperPublic {
   fame: number;
   notoriety: number;
   decree: string;
+  lastAct: string;
+  lastActText: string;
+  lastActTick: number;
   scheme: KeeperSchemePublic | null;
   records: RecordRowDTO[];
 }

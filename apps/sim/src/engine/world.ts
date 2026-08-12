@@ -145,6 +145,7 @@ function initialDungeon(): DungeonState {
     mintedCp: 0,
     sinkCp: 0,
     scheme: null,
+    keeperAct: { last: '', tick: 0, text: '', cooldowns: {} },
     records: [],
   };
 }

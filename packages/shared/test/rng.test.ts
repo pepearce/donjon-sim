@@ -50,6 +50,10 @@ describe('rngFor', () => {
       SCHEME: 29,
       RECORD: 30,
       COMBAT_TARGET_WEIGHT: 31,
+      TEAM_DOCTRINE: 32,
+      TEAM_DEST: 33,
+      TEAM_ROOMSPOT: 34,
+      KEEPER: 35,
     };
     for (const [name, value] of Object.entries(frozen)) {
       expect(RngDomain[name as keyof typeof frozen]).toBe(value);

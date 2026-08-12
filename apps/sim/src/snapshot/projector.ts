@@ -241,8 +241,18 @@ export function describeEvent(
       return `The Grand Khan's loan of ${NUM(payload['cp'])}cp was ${STR(payload['action'])}`;
     case 'REST':
       return `${STR(payload['team'])} rested, ${NUM(payload['cp'])}cp of poultices`;
-    case 'CORPSE_TAX_LEVIED':
-      return `The Keeper recovered ${NUM(payload['recoveredCp'])}cp from ${STR(payload['hero'])}`;
+    case 'CORPSE_TAX_LEVIED': {
+      if (payload['estateCp'] === undefined) {
+        return `The Keeper recovered ${NUM(payload['recoveredCp'])}cp from ${STR(payload['hero'])}`;
+      }
+      const estate = NUM(payload['estateCp']);
+      const widow = NUM(payload['widowCp']);
+      if (estate <= 0) return `The Keeper found nothing worth taking from ${STR(payload['hero'])}`;
+      if (widow <= 0) {
+        return `The Keeper took all ${estate}cp of ${STR(payload['hero'])}'s estate`;
+      }
+      return `The Keeper taxed ${NUM(payload['taxCp'])}cp from ${STR(payload['hero'])}'s ${estate}cp estate, ${widow}cp to the crew`;
+    }
     case 'DUNGEON_RESTOCK':
       return `${STR(payload['room'])} was restocked`;
     case 'WORLD_INIT':
@@ -418,6 +428,9 @@ export function projectKeeper(world: World): KeeperPublic {
       .filter((e) => e.type === 'KEEPER_DECREE')
       .map((e) => String(e.payload['text'] ?? ''))
       .pop() ?? '',
+    lastAct: d.keeperAct.last,
+    lastActText: d.keeperAct.text,
+    lastActTick: d.keeperAct.tick,
     scheme: projectScheme(world),
     records: projectRecords(world),
   };
