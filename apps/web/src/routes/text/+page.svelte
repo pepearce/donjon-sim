@@ -75,8 +75,13 @@
           <ul class="mt-1 list-disc pl-6 text-body-sm">
             {#each team.heroes as hero (hero.id)}
               <li>
-                {hero.name}, level {hero.level} {hero.species} {hero.className} —
-                {hero.alive ? `${hero.hp} of ${hero.hpMax} health` : 'fallen'}
+                {hero.name}, level {hero.level} {hero.species} {hero.className},
+                {hero.line} line —
+                {hero.state === 'ok'
+                  ? `${hero.hp} of ${hero.hpMax} health`
+                  : hero.state === 'downed'
+                    ? 'down and bleeding out'
+                    : 'fallen'}
               </li>
             {/each}
           </ul>

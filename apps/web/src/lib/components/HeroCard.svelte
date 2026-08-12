@@ -1,7 +1,7 @@
 <script lang="ts">
   import { DAY_TICKS, type HeroDetailDTO } from '@donjon/shared';
   import { useSim } from '../store.svelte.js';
-  import { coin, hpTone, rarityChip, relationWord, traitMeaning, xpSpent } from './dossier.js';
+  import { classMeaning, coin, fightLine, hpTone, rarityChip, relationWord, speciesMeaning, traitMeaning, xpSpent } from './dossier.js';
 
   interface Props {
     hero: HeroDetailDTO;
@@ -86,7 +86,27 @@
   </h4>
 
   <div id={bodyId} class="px-2 pb-2" class:hidden={!open}>
+    <p class="mb-1.5 text-body-sm text-ink-800 italic">{fightLine(hero)}</p>
     <div class="flex flex-wrap items-center gap-1">
+      <span
+        class="ink-hair rounded-full px-2 py-0.5 font-mono text-micro {hero.line === 'front'
+          ? 'border-torch-700/50 text-torch-700'
+          : 'border-arcane-700/45 text-arcane-700'}"
+      >
+        {hero.line === 'front' ? 'FRONT' : 'BACK'}
+      </span>
+      <span
+        class="ink-hair rounded-full bg-parchment-100 px-2 py-0.5 font-mono text-micro text-ink-800"
+        title={classMeaning(hero.className).blurb}
+      >
+        {classMeaning(hero.className).label}
+      </span>
+      <span
+        class="ink-hair rounded-full bg-parchment-100 px-2 py-0.5 font-mono text-micro text-ink-800"
+        title={speciesMeaning(hero.species).blurb}
+      >
+        {speciesMeaning(hero.species).label}
+      </span>
       {#each hero.traits as trait (trait)}
         {@const meaning = traitMeaning(trait)}
         <span

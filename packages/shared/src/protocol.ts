@@ -55,6 +55,10 @@ export interface FloorIndexEntry {
   discovered: boolean;
 }
 
+export type HeroLine = 'front' | 'back';
+
+export type HeroStateDTO = 'ok' | 'downed' | 'dead';
+
 export interface HeroPublic {
   id: number;
   name: string;
@@ -64,6 +68,8 @@ export interface HeroPublic {
   hp: number;
   hpMax: number;
   alive: boolean;
+  line: HeroLine;
+  state: HeroStateDTO;
   kills: number;
   traits: string[];
   epithet: string;
@@ -111,6 +117,7 @@ export interface MonsterPublic {
   x: number;
   y: number;
   name: string;
+  kindId: string;
   cr: number;
   hp: number;
   hpMax: number;

@@ -5,6 +5,7 @@ import { BLEED_OUT_TICKS, clamp, pushHistory, statMod, type Hero, type Monster, 
 import { awardXp } from './progression.js';
 import { dropLoot } from './loot.js';
 import { awardEpithet } from './epithets.js';
+import { lineOf } from './formation.js';
 import { griefMultiplier, linkAllPairs, linkPair } from './relations.js';
 import { setRecord } from './records.js';
 import { hasTrait, traitCount } from './traits.js';
@@ -59,6 +60,141 @@ export function monsterFromCr(world: World, name: string, cr: number, roomId: nu
     guardian,
     alive: true,
   };
+}
+
+function killMonster(world: World, team: Team, hero: Hero, target: Monster, damage: number): void {
+  target.alive = false;
+  target.hp = 0;
+  hero.kills += 1;
+  awardXp(world, team, target.xp);
+  emit(world, {
+    type: 'MONSTER_DOWN',
+    teamId: team.id,
+    heroId: hero.id,
+    floorId: team.floorId,
+    payload: { hero: hero.name, monster: target.name, damage },
+  });
+
+  if (hero.nemesisName !== '' && target.name === hero.nemesisName) {
+    emit(world, {
+      type: 'HERO_NEMESIS_SLAIN',
+      teamId: team.id,
+      heroId: hero.id,
+      floorId: team.floorId,
+      payload: { hero: hero.name, monster: target.name, downs: hero.nemesisDowns },
+    });
+    hero.nemesisName = '';
+    hero.nemesisDowns = 0;
+    awardEpithet(world, hero, 'nemesis');
+  }
+
+  if (target.guardian) {
+    const depth = floorOf(world, team.floorId)?.depth ?? 1;
+    pushHistory(
+      team,
+      world.tick,
+      'boss',
+      `${hero.name} put down the ${target.name} that held floor ${depth}.`,
+    );
+  }
+
+  if (hero.className === 'cutpurse') {
+    const skimCp = Math.max(1, Math.round(2 * target.cr));
+    team.carriedCp += skimCp;
+    world.dungeon.mintedCp += skimCp;
+    emit(world, {
+      type: 'HERO_SKIM',
+      teamId: team.id,
+      heroId: hero.id,
+      floorId: team.floorId,
+      payload: { hero: hero.name, monster: target.name, cp: skimCp },
+    });
+  }
+
+  if (hero.kills >= 10) awardEpithet(world, hero, 'kills10');
+  setRecord(world, 'kills', 'most kills by one hero', hero.kills, hero.name, team);
+}
+
+function pretreAid(world: World, team: Team, hero: Hero): boolean {
+  const rng = rngFor(world.seed, world.tick, RngDomain.ACT_AID, hero.id);
+
+  const downed = roster(world, team).filter((h) => h.state === 'downed');
+  const patient = downed[0];
+  if (patient) {
+    const p = clamp(
+      0.1,
+      0.9,
+      0.6 +
+        0.05 * statMod(hero.stats.wil) +
+        0.02 * hero.level +
+        (hasTrait(hero, 'loyal') ? 0.12 : 0) +
+        (hasTrait(hero, 'pious') ? 0.08 : 0),
+    );
+    if (rng.chance(p)) {
+      patient.state = 'ok';
+      patient.hp = 1;
+      patient.scarred = true;
+      world.scheduler.cancel('BLEED_OUT', patient.id);
+      team.morale = clamp(0, 100, team.morale + 4);
+      linkPair(world, hero, patient, 25);
+      emit(world, {
+        type: 'HERO_AID',
+        teamId: team.id,
+        heroId: hero.id,
+        floorId: team.floorId,
+        payload: { hero: hero.name, ally: patient.name, saved: 1 },
+      });
+    }
+    return true;
+  }
+
+  const wounded = livingRoster(world, team)
+    .filter((h) => h.id !== hero.id && h.hp / h.hpMax < 0.5)
+    .sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax);
+  const ally = wounded[0];
+  if (!ally) return false;
+
+  const amount = Math.min(
+    ally.hpMax - ally.hp,
+    rng.int(1, 6) + Math.max(0, statMod(hero.stats.wil)),
+  );
+  if (amount <= 0) return false;
+  ally.hp += amount;
+  emit(world, {
+    type: 'HERO_AID',
+    teamId: team.id,
+    heroId: hero.id,
+    floorId: team.floorId,
+    payload: { hero: hero.name, ally: ally.name, amount },
+  });
+  return true;
+}
+
+export function sapperCharge(world: World, team: Team): void {
+  const sappers = livingRoster(world, team).filter((h) => h.className === 'sapper');
+  for (const sapper of sappers) {
+    const enemies = monstersIn(world, team.floorId, team.roomIdx);
+    if (enemies.length === 0) return;
+    const rng = rngFor(world.seed, world.tick, RngDomain.COMBAT_DMG, sapper.id);
+    let dealt = 0;
+    let downs = 0;
+    for (const monster of enemies) {
+      const damage = Math.max(1, rng.int(1, 6) + Math.floor(sapper.level / 3) - monster.dr);
+      monster.hp -= damage;
+      dealt += damage;
+      if (monster.hp <= 0) {
+        downs += 1;
+        killMonster(world, team, sapper, monster, damage);
+      }
+    }
+    emit(world, {
+      type: 'HERO_BLAST',
+      teamId: team.id,
+      heroId: sapper.id,
+      floorId: team.floorId,
+      payload: { hero: sapper.name, damage: dealt, hit: enemies.length, downed: downs },
+    });
+  }
 }
 
 function downHero(world: World, hero: Hero, team: Team, source: string): void {
@@ -119,81 +255,88 @@ export function resolveCombatRound(world: World, team: Team): void {
     if (actor.kind === 'hero') {
       const hero = living.find((h) => h.id === actor.id);
       if (!hero || hero.state !== 'ok') continue;
-      const targets = monstersIn(world, team.floorId, team.roomIdx);
-      if (targets.length === 0) break;
+      if (monstersIn(world, team.floorId, team.roomIdx).length === 0) break;
+
+      if (hero.className === 'pretre' && pretreAid(world, team, hero)) continue;
 
       const targetRng = rngFor(world.seed, world.tick, RngDomain.COMBAT_TARGET_WEIGHT, hero.id);
-      const weights = targets.map((m) => {
-        let w = 1;
-        if (hero.nemesisName !== '' && m.name === hero.nemesisName) w *= hasTrait(hero, 'vengeful') ? 12 : 2;
-        if (m.guardian && hasTrait(hero, 'glory_hound')) w *= 2;
-        return w;
-      });
-      const targetWeight = weights.reduce((a, b) => a + b, 0);
-      let targetPoint = targetRng.float() * targetWeight;
-      let target = targets[0];
-      for (let i = 0; i < targets.length; i++) {
-        targetPoint -= weights[i] ?? 0;
-        if (targetPoint <= 0) {
-          target = targets[i];
-          break;
-        }
-      }
-      if (!target) continue;
-
       const hitRng = rngFor(world.seed, world.tick, RngDomain.COMBAT_HIT, hero.id);
-      const d20 = hitRng.int(1, 20);
-      if (d20 === 1) continue;
-      const crit = d20 === 20;
-      const luck = hasTrait(hero, 'lucky') ? 1 : 0;
-      if (!crit && d20 + luck < hitDc(heroAtk(world, hero), target.def)) continue;
-
       const dmgRng = rngFor(world.seed, world.tick, RngDomain.COMBAT_DMG, hero.id);
-      const dice = roll(dmgRng, crit ? 2 : 1, 6);
-      const raw = dice + statMod(hero.stats[hero.primary]) + Math.floor(hero.level / 3);
-      const damage = Math.max(1, crit ? raw : raw - target.dr);
-      target.hp -= damage;
-      damageDealt += damage;
+      const arcRng = rngFor(world.seed, world.tick, RngDomain.ACT_ARC, hero.id);
 
-      if (target.hp <= 0) {
-        target.alive = false;
-        target.hp = 0;
-        hero.kills += 1;
-        monstersDown += 1;
-        awardXp(world, team, target.xp);
-        emit(world, {
-          type: 'MONSTER_DOWN',
-          teamId: team.id,
-          heroId: hero.id,
-          floorId: team.floorId,
-          payload: { hero: hero.name, monster: target.name, damage },
+      let strikes = 1;
+      let riposted = false;
+      while (strikes > 0) {
+        strikes -= 1;
+        const targets = monstersIn(world, team.floorId, team.roomIdx);
+        if (targets.length === 0) break;
+
+        const weights = targets.map((m) => {
+          let w = 1;
+          if (hero.nemesisName !== '' && m.name === hero.nemesisName) w *= hasTrait(hero, 'vengeful') ? 12 : 2;
+          if (m.guardian && hasTrait(hero, 'glory_hound')) w *= 2;
+          return w;
         });
+        const targetWeight = weights.reduce((a, b) => a + b, 0);
+        let targetPoint = targetRng.float() * targetWeight;
+        let target = targets[0];
+        for (let i = 0; i < targets.length; i++) {
+          targetPoint -= weights[i] ?? 0;
+          if (targetPoint <= 0) {
+            target = targets[i];
+            break;
+          }
+        }
+        if (!target) break;
 
-        if (hero.nemesisName !== '' && target.name === hero.nemesisName) {
-          emit(world, {
-            type: 'HERO_NEMESIS_SLAIN',
-            teamId: team.id,
-            heroId: hero.id,
-            floorId: team.floorId,
-            payload: { hero: hero.name, monster: target.name, downs: hero.nemesisDowns },
-          });
-          hero.nemesisName = '';
-          hero.nemesisDowns = 0;
-          awardEpithet(world, hero, 'nemesis');
+        const d20 = hitRng.int(1, 20);
+        if (d20 === 1) continue;
+        const crit = d20 === 20;
+        const luck = hasTrait(hero, 'lucky') ? 1 : 0;
+        if (!crit && d20 + luck < hitDc(heroAtk(world, hero), target.def)) continue;
+
+        const dice = roll(dmgRng, crit ? 2 : 1, 6);
+        const raw = dice + statMod(hero.stats[hero.primary]) + Math.floor(hero.level / 3);
+        const damage = Math.max(1, crit ? raw : raw - target.dr);
+        target.hp -= damage;
+        damageDealt += damage;
+
+        if (hero.className === 'thaumaturge' && targets.length > 1) {
+          const others = targets.filter((m) => m.id !== target.id && m.alive);
+          const splashTarget = others[arcRng.int(0, Math.max(0, others.length - 1))];
+          if (splashTarget) {
+            const splash = Math.max(1, Math.floor(damage / 2));
+            splashTarget.hp -= splash;
+            damageDealt += splash;
+            emit(world, {
+              type: 'HERO_ARC',
+              teamId: team.id,
+              heroId: hero.id,
+              floorId: team.floorId,
+              payload: { hero: hero.name, monster: target.name, other: splashTarget.name, damage: splash },
+            });
+            if (splashTarget.hp <= 0) {
+              monstersDown += 1;
+              killMonster(world, team, hero, splashTarget, splash);
+            }
+          }
         }
 
-        if (target.guardian) {
-          const depth = floorOf(world, team.floorId)?.depth ?? 1;
-          pushHistory(
-            team,
-            world.tick,
-            'boss',
-            `${hero.name} put down the ${target.name} that held floor ${depth}.`,
-          );
+        if (target.hp <= 0 && target.alive) {
+          monstersDown += 1;
+          killMonster(world, team, hero, target, damage);
+          if (hero.className === 'sabreur' && !riposted) {
+            riposted = true;
+            strikes += 1;
+            emit(world, {
+              type: 'HERO_RIPOSTE',
+              teamId: team.id,
+              heroId: hero.id,
+              floorId: team.floorId,
+              payload: { hero: hero.name, monster: target.name },
+            });
+          }
         }
-
-        if (hero.kills >= 10) awardEpithet(world, hero, 'kills10');
-        setRecord(world, 'kills', 'most kills by one hero', hero.kills, hero.name, team);
       }
     } else {
       const monster = enemies.find((m) => m.id === actor.id);
@@ -202,10 +345,12 @@ export function resolveCombatRound(world: World, team: Team): void {
       if (candidates.length === 0) break;
 
       const targetRng = rngFor(world.seed, world.tick, RngDomain.COMBAT_TARGET, monster.id + 100_000);
+      const anyFrontUp = candidates.some((h) => lineOf(h) === 'front');
       const weights = candidates.map((h) => {
         let w = 1;
         if (h.hp / h.hpMax < 0.35) w *= 1.6;
         if (heroDef(world, h) >= 14) w *= 0.6;
+        if (anyFrontUp && lineOf(h) === 'back') w *= 0.35;
         return w;
       });
       const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -219,6 +364,26 @@ export function resolveCombatRound(world: World, team: Team): void {
         }
       }
       if (!victim) continue;
+
+      if (lineOf(victim) === 'back') {
+        const ward = victim;
+        const guard = candidates.find(
+          (h) => h.className === 'bruiser' && h.id !== ward.id && lineOf(h) === 'front',
+        );
+        if (guard) {
+          const shieldRng = rngFor(world.seed, world.tick, RngDomain.ACT_SHIELD, monster.id + 100_000);
+          if (shieldRng.chance(0.35)) {
+            emit(world, {
+              type: 'HERO_SHIELDED',
+              teamId: team.id,
+              heroId: guard.id,
+              floorId: team.floorId,
+              payload: { hero: guard.name, ward: victim.name, monster: monster.name },
+            });
+            victim = guard;
+          }
+        }
+      }
 
       const hitRng = rngFor(world.seed, world.tick, RngDomain.COMBAT_HIT, monster.id + 100_000);
       const d20 = hitRng.int(1, 20);

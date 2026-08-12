@@ -41,6 +41,12 @@ export const EVENT_TYPES = [
   'KEEPER_SCHEME_ENDED',
   'ROOM_LANDMARK',
   'SHOP_TRADE',
+  'HERO_AID',
+  'HERO_SHIELDED',
+  'HERO_RIPOSTE',
+  'HERO_ARC',
+  'HERO_BLAST',
+  'HERO_SKIM',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -64,6 +70,12 @@ export const SEVERITY: Record<EventType, Severity> = {
   HERO_BOND_FORMED: 1,
   HERO_GRUDGE_FORMED: 1,
   SHOP_TRADE: 1,
+  HERO_AID: 1,
+  HERO_SHIELDED: 1,
+  HERO_RIPOSTE: 1,
+  HERO_ARC: 1,
+  HERO_BLAST: 1,
+  HERO_SKIM: 1,
   HERO_DOWN: 2,
   ROOM_CLEARED: 2,
   FLOOR_DESCEND: 2,

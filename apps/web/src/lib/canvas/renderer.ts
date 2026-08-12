@@ -1,4 +1,4 @@
-import { forEachVisible, hasLineOfSight, type FloorMapDTO, type MonsterPublic, type TokenPublic } from '@donjon/shared';
+import { forEachVisible, hasLineOfSight, type FloorMapDTO, type HeroPublic, type MonsterPublic, type TokenPublic } from '@donjon/shared';
 import type { FxEvent } from '../applyFrame.js';
 import { FX_PALETTE, MAP_PALETTE, mixColor, teamColor, teamShape, withAlpha, type TokenShape } from '../design/teams.js';
 import { onFloor } from '../floorview.js';
@@ -10,6 +10,17 @@ export { CACHE_TILE, TILE_DOOR, TILE_FLOOR, TILE_STAIRS, TILE_WALL };
 
 const TORCH_TILES = 6.5;
 const FOG_SCALE = 4;
+const UNFOLD_TILE_PX = 26;
+const MONSTER_LABEL_TILE_PX = 22;
+
+const CLASS_GLYPHS: Record<string, string> = {
+  sabreur: '/',
+  bruiser: '#',
+  cutpurse: '$',
+  sapper: '^',
+  thaumaturge: '*',
+  pretre: '+',
+};
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 9;
 const FOLLOW_ZOOM = 2.6;
@@ -85,6 +96,7 @@ export class MapRenderer {
   private allMonsters: MonsterPublic[] = [];
   private tokens: TokenPublic[] = [];
   private monsters: MonsterPublic[] = [];
+  private rosters = new Map<number, HeroPublic[]>();
   private dpr = 1;
 
   readonly camera: Camera = { zoom: 1, panX: 0, panY: 0 };
@@ -196,6 +208,10 @@ export class MapRenderer {
   setMonsters(monsters: MonsterPublic[]): void {
     this.allMonsters = monsters;
     this.reslice();
+  }
+
+  setRosters(rosters: Map<number, HeroPublic[]>): void {
+    this.rosters = rosters;
   }
 
   private reslice(): void {
@@ -532,6 +548,8 @@ export class MapRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    const claimed: Array<[number, number, number, number]> = [];
+
     for (const monster of this.monsters) {
       if (!isSeen(monster.x, monster.y)) continue;
       const mx = offsetX + (monster.x + 0.5) * tilePx;
@@ -586,18 +604,100 @@ export class MapRenderer {
         ctx.fillText(String(Math.round(monster.cr)), mx, my + 0.5);
       }
 
-      if (monster.guardian && tilePx >= 20) {
-        ctx.font = `600 ${Math.round(Math.max(9, tilePx * 0.42))}px ${MONO}`;
-        ctx.lineWidth = Math.max(2, tilePx * 0.12);
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = MAP_PALETTE.labelInk;
-        ctx.strokeText(monster.name, mx, my - r * 2.1);
-        ctx.fillStyle = FX_PALETTE.guardian;
-        ctx.fillText(monster.name, mx, my - r * 2.1);
+      const showLabel = monster.guardian ? tilePx >= 20 : tilePx >= MONSTER_LABEL_TILE_PX;
+      if (showLabel) {
+        const size = monster.guardian
+          ? Math.max(9, tilePx * 0.42)
+          : Math.max(8, tilePx * 0.32);
+        const ly = my - r * 2.1;
+        ctx.font = `600 ${Math.round(size)}px ${MONO}`;
+        const half = ctx.measureText(monster.name).width / 2 + 3;
+        const top = ly - size * 0.75;
+        const bottom = ly + size * 0.75;
+        const clash = claimed.some(
+          (b) => mx - half < b[2] && mx + half > b[0] && top < b[3] && bottom > b[1],
+        );
+        if (monster.guardian || !clash) {
+          claimed.push([mx - half, top, mx + half, bottom]);
+          ctx.lineWidth = Math.max(2, tilePx * 0.12);
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = MAP_PALETTE.labelInk;
+          ctx.strokeText(monster.name, mx, ly);
+          ctx.fillStyle = monster.guardian ? FX_PALETTE.guardian : MAP_PALETTE.label;
+          ctx.fillText(monster.name, mx, ly);
+        }
       }
     }
 
     ctx.restore();
+  }
+
+  private drawCrew(
+    ctx: CanvasRenderingContext2D,
+    crew: HeroPublic[],
+    token: TokenPublic,
+    cx: number,
+    cy: number,
+    tilePx: number,
+    strokeW: number,
+  ): void {
+    const colour = teamColor(token.colorIndex);
+    const front = crew.filter((h) => h.line === 'front' && h.state !== 'dead');
+    const back = crew.filter((h) => h.line === 'back' && h.state !== 'dead');
+    const rows = [front, back].filter((row) => row.length > 0);
+    if (rows.length === 0) return;
+
+    const rp = Math.max(4, tilePx * 0.19);
+    const gap = rp * 2.3;
+    const rowGap = rp * 2.5;
+    const y0 = cy - ((rows.length - 1) / 2) * rowGap;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r] ?? [];
+      const py = y0 + r * rowGap;
+      const x0 = cx - ((row.length - 1) / 2) * gap;
+
+      for (let i = 0; i < row.length; i++) {
+        const hero = row[i];
+        if (!hero) continue;
+        const px = x0 + i * gap;
+        const downed = hero.state === 'downed';
+
+        ctx.beginPath();
+        ctx.arc(px, py, rp, 0, Math.PI * 2);
+        ctx.fillStyle = downed ? withAlpha(colour, 0.18) : colour;
+        ctx.fill();
+        ctx.strokeStyle = downed ? FX_PALETTE.blood : MAP_PALETTE.wallInk;
+        ctx.lineWidth = Math.max(0.75, strokeW * 0.8);
+        ctx.stroke();
+
+        ctx.font = `700 ${Math.round(rp * 1.15)}px ${MONO}`;
+        ctx.fillStyle = downed ? FX_PALETTE.blood : MAP_PALETTE.wallInk;
+        ctx.fillText(CLASS_GLYPHS[hero.className] ?? '?', px, py + 0.5);
+
+        if (!downed && hero.hp < hero.hpMax && hero.hpMax > 0) {
+          const frac = Math.max(0, hero.hp / hero.hpMax);
+          ctx.strokeStyle =
+            frac > 0.5 ? FX_PALETTE.level : frac > 0.25 ? FX_PALETTE.clash : FX_PALETTE.blood;
+          ctx.lineWidth = Math.max(1, strokeW * 0.7);
+          ctx.beginPath();
+          ctx.arc(px, py, rp * 1.3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.font = `700 ${Math.round(Math.max(8, tilePx * 0.28))}px ${MONO}`;
+    ctx.lineWidth = Math.max(2, tilePx * 0.08);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = MAP_PALETTE.labelInk;
+    const ly = y0 - rowGap * 0.5 - rp * 1.6;
+    ctx.strokeText(token.monogram, cx, ly);
+    ctx.fillStyle = colour;
+    ctx.fillText(token.monogram, cx, ly);
   }
 
   draw(): void {
@@ -685,6 +785,15 @@ export class MapRenderer {
         ctx.strokeStyle = FX_PALETTE.clash;
         ctx.lineWidth = Math.max(1.25, strokeW);
         ctx.stroke();
+      }
+
+      const crew = this.rosters.get(token.id);
+      if (tilePx >= UNFOLD_TILE_PX && crew && crew.length > 0) {
+        this.drawCrew(ctx, crew, token, cx, cy, tilePx, strokeW);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 1;
+        continue;
       }
 
       ctx.fillStyle = teamColor(token.colorIndex);

@@ -19,7 +19,7 @@ import type {
 } from '../engine/types.js';
 import type { WakeKind } from '../engine/scheduler.js';
 
-export const SIM_VERSION = '0.4.0';
+export const SIM_VERSION = '0.5.0';
 
 export interface BootReport {
   fresh: boolean;

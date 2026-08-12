@@ -262,6 +262,7 @@
     if (!renderer) return;
     renderer.setTokens(sim.tokens);
     renderer.setMonsters(sim.monsters);
+    renderer.setRosters(new Map(sim.teams.map((t) => [t.id, t.heroes])));
 
     const fogForFloor = sim.fog === null ? null : new Set(sim.fog[String(loadedFloor)] ?? []);
     const team = sim.teams.find((t) => t.id === sim.selectedTeam);

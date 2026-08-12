@@ -22,6 +22,8 @@ import {
 } from '@donjon/shared';
 import { narrate, type LoadedPack } from '@donjon/content';
 import { EPOCH } from '../epoch.js';
+import { MONSTERS } from '../engine/tables.js';
+import { lineOf } from '../engine/systems/formation.js';
 import { RARITY_NAMES, floorOf, heroById, itemsOf, roomTitle, roster, xpToNext } from '../engine/world.js';
 import type { Floor, Hero, World } from '../engine/types.js';
 
@@ -96,6 +98,8 @@ export function projectTeams(world: World): TeamPublic[] {
           hp: Math.round(h.hp),
           hpMax: Math.round(h.hpMax),
           alive: h.state === 'ok',
+          line: lineOf(h),
+          state: h.state,
           kills: h.kills,
           traits: h.traits.slice(),
           epithet: h.epithet,
@@ -116,6 +120,8 @@ function projectHeroDetail(world: World, h: Hero): HeroDetailDTO {
     hp: Math.round(h.hp),
     hpMax: Math.round(h.hpMax),
     alive: h.state === 'ok',
+    line: lineOf(h),
+    state: h.state,
     kills: h.kills,
     traits: h.traits.slice(),
     epithet: h.epithet,
@@ -290,6 +296,20 @@ export function describeEvent(
       return `The Keeper hired ${STR(payload['monster'])} to hold floor ${NUM(payload['depth'])}`;
     case 'PARTY_ENTERED':
       return `${STR(payload['team'])} walked into floor ${NUM(payload['depth'])}`;
+    case 'HERO_AID':
+      return payload['saved']
+        ? `${STR(payload['hero'])} dragged ${STR(payload['ally'])} back from the brink`
+        : `${STR(payload['hero'])} patched ${STR(payload['ally'])} up for ${NUM(payload['amount'])}`;
+    case 'HERO_SHIELDED':
+      return `${STR(payload['hero'])} took the ${STR(payload['monster'])}'s blow meant for ${STR(payload['ward'])}`;
+    case 'HERO_RIPOSTE':
+      return `${STR(payload['hero'])} felled the ${STR(payload['monster'])} and kept swinging`;
+    case 'HERO_ARC':
+      return `${STR(payload['hero'])}'s working arced from the ${STR(payload['monster'])} to the ${STR(payload['other'])} for ${NUM(payload['damage'])}`;
+    case 'HERO_BLAST':
+      return `${STR(payload['hero'])} opened the room with a charge, ${NUM(payload['damage'])} across ${NUM(payload['hit'])} of the staff`;
+    case 'HERO_SKIM':
+      return `${STR(payload['hero'])} skimmed ${NUM(payload['cp'])}cp off the ${STR(payload['monster'])}`;
     default:
       return `${type} ${JSON.stringify(payload)}`;
   }
@@ -357,6 +377,8 @@ export function projectFloorIndex(world: World): FloorIndexEntry[] {
   }));
 }
 
+const KIND_BY_NAME = new Map(MONSTERS.map((m) => [m.name, m.id]));
+
 export function projectMonsters(world: World): MonsterPublic[] {
   const out: MonsterPublic[] = [];
   const perRoom = new Map<number, number>();
@@ -377,6 +399,7 @@ export function projectMonsters(world: World): MonsterPublic[] {
       x: Math.max(room.x, Math.min(room.x + room.w - 1, room.cx + (ring[0] ?? 0))),
       y: Math.max(room.y, Math.min(room.y + room.h - 1, room.cy + (ring[1] ?? 0))),
       name: m.name,
+      kindId: KIND_BY_NAME.get(m.name) ?? 'unknown',
       cr: Math.round(m.cr * 10) / 10,
       hp: Math.round(m.hp),
       hpMax: Math.round(m.hpMax),

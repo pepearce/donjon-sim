@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, tick, untrack } from 'svelte';
+  import Codex from '$lib/components/Codex.svelte';
   import ConnectionBanner from '$lib/components/ConnectionBanner.svelte';
   import EventTicker from '$lib/components/EventTicker.svelte';
   import KeeperPanel from '$lib/components/KeeperPanel.svelte';
@@ -29,6 +30,7 @@
 
   let sideTab = $state<'teams' | 'board'>('teams');
   let rosterEl = $state<HTMLElement | null>(null);
+  let codexOpen = $state(false);
 
   onMount(() => {
     const connection = connect(sim, motion);
@@ -56,9 +58,13 @@
     if (id === null) {
       sim.drawerOpen = false;
       sim.selectedHero = null;
+      sim.follow = false;
       return;
     }
-    if (!auto) sim.drawerOpen = true;
+    if (!auto) {
+      sim.drawerOpen = true;
+      sim.follow = true;
+    }
   });
 
   function closeDrawer(): void {
@@ -90,8 +96,10 @@
     else if (e.key === ']') sim.selectedFloor = Math.min(sim.floors.length, sim.selectedFloor + 1);
     else if (e.key === 'f' || e.key === 'F') sim.follow = !sim.follow;
     else if (e.key === 'd' || e.key === 'D') sim.director = !sim.director;
+    else if (e.key === 'c' || e.key === 'C') codexOpen = !codexOpen;
     else if (e.key === 'Escape') {
-      if (sim.drawerOpen) closeDrawer();
+      if (codexOpen) codexOpen = false;
+      else if (sim.drawerOpen) closeDrawer();
       else sim.selectedTeam = null;
     }
   }
@@ -152,6 +160,16 @@
         <span class="text-stone-600">·</span>
         <span>[ ] FLOOR</span>
       </p>
+      <button
+        type="button"
+        class="ink shrink-0 rounded-sm px-2 py-1 font-mono text-micro {codexOpen
+          ? 'bg-tab-active text-ink'
+          : 'bg-tab-idle text-stone-300'}"
+        aria-pressed={codexOpen}
+        onclick={() => (codexOpen = !codexOpen)}
+      >
+        CODEX
+      </button>
       <SpeedControl />
       <ConnectionBanner />
     </div>
@@ -228,6 +246,15 @@
       <TeamDrawer />
     </div>
   {/if}
+
+  {#if codexOpen}
+    <button type="button" class="scrim codex-scrim" onclick={() => (codexOpen = false)}>
+      <span class="sr-only">Close the codex</span>
+    </button>
+    <div class="codex min-h-0">
+      <Codex onclose={() => (codexOpen = false)} />
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -269,6 +296,20 @@
     cursor: default;
   }
 
+  .codex {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 55;
+    width: min(28rem, 100vw);
+    padding: 0.75rem;
+    animation: var(--animate-dossier-in);
+  }
+
+  .codex-scrim {
+    z-index: 54;
+    display: block;
+  }
+
   @media (min-width: 1600px) {
     .dash-grid.has-dossier {
       grid-template-columns: 21rem minmax(360px, 1fr) 21.25rem 24rem;
@@ -284,7 +325,7 @@
       padding: 0;
     }
 
-    .scrim {
+    .scrim:not(.codex-scrim) {
       display: none;
     }
   }
