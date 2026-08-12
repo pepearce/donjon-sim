@@ -7,3 +7,8 @@ dist/
 donjon.db*
 .env
 .DS_Store
+
+# generated / scratch
+apps/web/build/
+apps/web/.svelte-kit/
+.playwright-mcp/

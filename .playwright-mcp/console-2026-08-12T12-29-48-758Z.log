@@ -1,6 +1,0 @@
-[  169177ms] ReferenceError: TORCH_TILES is not defined
-    at MapRenderer.draw (http://localhost:5173/src/lib/canvas/renderer.ts?t=1786537957896:209:105)
-    at tick (http://localhost:5173/src/lib/canvas/renderer.ts?t=1786537957896:293:12)
-[  171371ms] ReferenceError: TORCH_TILES is not defined
-    at MapRenderer.draw (http://localhost:5173/src/lib/canvas/renderer.ts?t=1786537960096:212:105)
-    at tick (http://localhost:5173/src/lib/canvas/renderer.ts?t=1786537960096:296:12)
