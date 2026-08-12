@@ -4,11 +4,30 @@ import { GUARDIAN_NAMES, KEEPER_ACTIONS, MONSTERS, type KeeperActionDef } from '
 import { floorOf } from '../world.js';
 import { monsterFromCr, wageForCr } from './combat.js';
 import { maybeStartScheme, schemeTarget } from './dungeon.js';
+import { rungOf } from './standing.js';
 import type { Floor, World } from '../types.js';
 
 const HIRE_DAYS = 30;
 const HIRE_CR_BOOST = 1.4;
 const AUSTERITY_TREASURY_CP = 30_000;
+const CENSURED_HIRE_MULT = 1.5;
+
+const TRAIT_ACTION_BOOST: Record<string, string[]> = {
+  miserly: ['toll_up', 'corpse_tax_up', 'austerity'],
+  vain: ['marketing', 'hire_guardian'],
+  vengeful: ['open_scheme'],
+};
+
+const OVERSEER_MENU = new Set(['toll_up', 'toll_cut', 'observe']);
+
+export function traitWeightMult(trait: string, actionId: string): number {
+  return (TRAIT_ACTION_BOOST[trait] ?? []).includes(actionId) ? 2 : 1;
+}
+
+function actionWeight(world: World, action: KeeperActionDef): number {
+  const d = world.dungeon;
+  return (action.weights[d.keeperMood] ?? 0) * traitWeightMult(d.keeperTrait, action.id);
+}
 
 function hireFloor(world: World): Floor | undefined {
   const marked = schemeTarget(world);
@@ -34,7 +53,8 @@ export function keeperCost(world: World, action: KeeperActionDef): number {
   if (action.id !== 'hire_guardian') return action.costCp;
   const floor = hireFloor(world);
   if (!floor) return Number.MAX_SAFE_INTEGER;
-  return HIRE_DAYS * wageForCr(hireCr(floor));
+  const base = HIRE_DAYS * wageForCr(hireCr(floor));
+  return rungOf(world.dungeon.standing) === 'censured' ? Math.round(base * CENSURED_HIRE_MULT) : base;
 }
 
 function available(world: World, action: KeeperActionDef): boolean {
@@ -54,8 +74,11 @@ function available(world: World, action: KeeperActionDef): boolean {
 
 export function keeperEligible(world: World): KeeperActionDef[] {
   const d = world.dungeon;
+  const rung = rungOf(d.standing);
   return KEEPER_ACTIONS.filter((action) => {
-    if ((action.weights[d.keeperMood] ?? 0) <= 0) return false;
+    if (rung === 'overseer' && !OVERSEER_MENU.has(action.id)) return false;
+    if (rung === 'censured' && action.id === 'open_scheme') return false;
+    if (actionWeight(world, action) <= 0) return false;
 
     const last = d.keeperAct.cooldowns[action.id];
     if (last !== undefined && world.tick - last < action.cooldownDays * DAY_TICKS) return false;
@@ -65,14 +88,14 @@ export function keeperEligible(world: World): KeeperActionDef[] {
   });
 }
 
-function weightedPick(rng: Rng, actions: KeeperActionDef[], mood: string): KeeperActionDef {
+function weightedPick(world: World, rng: Rng, actions: KeeperActionDef[]): KeeperActionDef {
   let total = 0;
-  for (const action of actions) total += action.weights[mood] ?? 0;
+  for (const action of actions) total += actionWeight(world, action);
   if (total <= 0) return actions[actions.length - 1] as KeeperActionDef;
 
   let roll = rng.int(1, total);
   for (const action of actions) {
-    roll -= action.weights[mood] ?? 0;
+    roll -= actionWeight(world, action);
     if (roll <= 0) return action;
   }
   return actions[actions.length - 1] as KeeperActionDef;
@@ -144,7 +167,7 @@ export function keeperAct(world: World): string {
   const menu = eligible.length > 0 ? eligible : [observe];
 
   const rng = rngFor(world.seed, world.tick, RngDomain.KEEPER, 0);
-  const action = weightedPick(rng, menu, d.keeperMood);
+  const action = weightedPick(world, rng, menu);
 
   const cost = action.id === 'observe' ? 0 : keeperCost(world, action);
   d.treasuryCp -= cost;

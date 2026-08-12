@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
 import { newWorld } from '../src/engine/setup.js';
 import { KEEPER_ACTIONS } from '../src/engine/tables.js';
-import { keeperAct, keeperCost, keeperEligible } from '../src/engine/systems/keeper.js';
+import { keeperAct, keeperCost, keeperEligible, traitWeightMult } from '../src/engine/systems/keeper.js';
+import { maybeStartScheme } from '../src/engine/systems/dungeon.js';
 import { killHero, sweepCorpse } from '../src/engine/systems/death.js';
 import { circulatingCoin, livingRoster } from '../src/engine/world.js';
 import type { World } from '../src/engine/types.js';
@@ -248,5 +249,51 @@ describe('corpse tax', () => {
     expect(levy?.payload['estateCp']).toBe(400);
     expect(levy?.payload['taxCp']).toBe(300);
     expect(levy?.payload['widowCp']).toBe(100);
+  });
+});
+
+describe('rungs and traits', () => {
+  it('locks the overseer menu down to tolls and observing', () => {
+    const world = worldAt('greedy', 500_000);
+    world.dungeon.standing = 5;
+    for (const id of ids(world)) {
+      expect(['toll_up', 'toll_cut', 'observe']).toContain(id);
+    }
+  });
+
+  it('locks schemes away from a censured keeper', () => {
+    const world = worldAt('greedy', 500_000);
+    world.dungeon.standing = 20;
+    expect(ids(world)).not.toContain('open_scheme');
+    world.dungeon.standing = 50;
+    expect(ids(world)).toContain('open_scheme');
+  });
+
+  it('marks up guardian hires by half while censured', () => {
+    const world = worldAt('content', 500_000);
+    const hire = KEEPER_ACTIONS.find((a) => a.id === 'hire_guardian');
+    expect(hire).toBeDefined();
+    world.dungeon.standing = 50;
+    const base = keeperCost(world, hire!);
+    world.dungeon.standing = 20;
+    expect(keeperCost(world, hire!)).toBe(Math.round(base * 1.5));
+  });
+
+  it('doubles trait-favoured action weights', () => {
+    expect(traitWeightMult('miserly', 'toll_up')).toBe(2);
+    expect(traitWeightMult('miserly', 'toll_cut')).toBe(1);
+    expect(traitWeightMult('vain', 'hire_guardian')).toBe(2);
+    expect(traitWeightMult('vengeful', 'open_scheme')).toBe(2);
+    expect(traitWeightMult('gambler', 'open_scheme')).toBe(1);
+  });
+
+  it('aims a vengeful keeper at the last big-haul team', () => {
+    const world = worldAt('greedy', 500_000);
+    world.dungeon.keeperTrait = 'vengeful';
+    const mark = world.teams[world.teams.length - 1];
+    expect(mark).toBeDefined();
+    world.dungeon.lastBigHaulTeamId = mark!.id;
+    maybeStartScheme(world);
+    expect(world.dungeon.scheme?.targetTeamId).toBe(mark!.id);
   });
 });

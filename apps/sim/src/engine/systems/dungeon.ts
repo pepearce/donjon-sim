@@ -107,7 +107,11 @@ export function maybeStartScheme(world: World): void {
   const active = world.teams
     .filter((t) => t.state !== 'disbanded')
     .sort((a, b) => b.renownMilli - a.renownMilli || a.id - b.id);
-  const target = active[0];
+  const grudge =
+    d.keeperTrait === 'vengeful'
+      ? active.find((t) => t.id === d.lastBigHaulTeamId)
+      : undefined;
+  const target = grudge ?? active[0];
   if (!target) return;
 
   const rng = rngFor(world.seed, world.tick, RngDomain.SCHEME, world.nextSchemeId);

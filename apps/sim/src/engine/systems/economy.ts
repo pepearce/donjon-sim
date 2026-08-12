@@ -77,6 +77,7 @@ export function bankLoot(world: World, team: Team): void {
   }
 
   if (carried >= BIG_HAUL_CP) {
+    world.dungeon.lastBigHaulTeamId = team.id;
     pushHistory(team, world.tick, 'haul', `${team.name} hauled ${carried}cp up the stairs in one trip.`);
   }
   setRecord(world, 'haul', 'largest single haul', carried, team.name, team);
