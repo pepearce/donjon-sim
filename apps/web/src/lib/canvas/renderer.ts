@@ -1,14 +1,21 @@
-import type { FloorMapDTO, MonsterPublic, TokenPublic } from '@donjon/shared';
-import { MAP_PALETTE, teamColor, teamShape, type TokenShape } from '../design/teams.js';
+import { forEachVisible, hasLineOfSight, type FloorMapDTO, type MonsterPublic, type TokenPublic } from '@donjon/shared';
+import type { FxEvent } from '../applyFrame.js';
+import { FX_PALETTE, MAP_PALETTE, mixColor, teamColor, teamShape, withAlpha, type TokenShape } from '../design/teams.js';
 import { onFloor } from '../floorview.js';
+import type { DramaBeat } from './fx.js';
+import { FxLayer, type FxAnchor } from './fx.js';
+import { CACHE_TILE, TILE_DOOR, TILE_FLOOR, TILE_STAIRS, TILE_WALL, decodeTiles, rasteriseTerrain } from './terrain.js';
 
-export const TILE_WALL = 0;
-export const TILE_FLOOR = 1;
-export const TILE_DOOR = 2;
-export const TILE_STAIRS = 3;
+export { CACHE_TILE, TILE_DOOR, TILE_FLOOR, TILE_STAIRS, TILE_WALL };
 
-const CACHE_TILE = 24;
 const TORCH_TILES = 6.5;
+const FOG_SCALE = 4;
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 9;
+const FOLLOW_ZOOM = 2.6;
+const ZOOM_TAU = 130;
+const PAN_TAU = 210;
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
 export interface Camera {
   zoom: number;
@@ -16,11 +23,10 @@ export interface Camera {
   panY: number;
 }
 
-function decodeTiles(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
+function torchAlpha(dist: number): number {
+  const t = Math.min(1, dist / TORCH_TILES);
+  if (t <= 0.55) return 1;
+  return Math.max(0, 1 - (t - 0.55) / 0.45);
 }
 
 function drawShape(
@@ -84,15 +90,24 @@ export class MapRenderer {
   readonly camera: Camera = { zoom: 1, panX: 0, panY: 0 };
   lastFrameMs = 0;
 
+  private readonly fxLayer = new FxLayer();
+  private fxQueue: FxEvent[] | null = null;
+  private reduced = false;
+  private followEnabled = false;
+  private desiredZoom = 1;
+  private lastTs = 0;
+
   private positionSource: ((id: number, fx: number, fy: number) => { x: number; y: number }) | null = null;
   private fogRooms: Set<number> | null = null;
   private sightRooms: Set<number> | null = null;
   private focusTokenId: number | null = null;
-  private fogLayer: HTMLCanvasElement | null = null;
   private fogMask: HTMLCanvasElement | null = null;
   private fogMaskKey = '';
   private fogSeeded = false;
   private seenTiles: Uint8Array | null = null;
+  private mapTiles: Uint8Array | null = null;
+
+  constructor(private readonly canvas: HTMLCanvasElement) {}
 
   setFog(
     rooms: Set<number> | null,
@@ -109,20 +124,39 @@ export class MapRenderer {
     }
   }
 
-  constructor(private readonly canvas: HTMLCanvasElement) {}
-
   setPositionSource(
     source: ((id: number, fx: number, fy: number) => { x: number; y: number }) | null,
   ): void {
     this.positionSource = source;
   }
 
+  setFxQueue(queue: FxEvent[] | null): void {
+    this.fxQueue = queue;
+  }
+
+  setReducedMotion(reduced: boolean): void {
+    this.reduced = reduced;
+  }
+
+  setFollow(on: boolean): void {
+    if (on && !this.followEnabled && this.camera.zoom < FOLLOW_ZOOM) {
+      this.desiredZoom = FOLLOW_ZOOM;
+    }
+    this.followEnabled = on;
+  }
+
+  dramaSince(cutoff: number): DramaBeat[] {
+    return this.fxLayer.dramaSince(cutoff);
+  }
+
   setMap(map: FloorMapDTO): void {
     this.map = map;
+    this.mapTiles = decodeTiles(map.tiles);
     const key = `${map.id}:${map.width}x${map.height}`;
     if (key !== this.terrainKey) {
       this.terrainKey = key;
-      this.rasteriseTerrain(map);
+      this.terrain = rasteriseTerrain(map, this.mapTiles);
+      this.fxLayer.clearParticles();
     }
     this.reslice();
   }
@@ -143,73 +177,99 @@ export class MapRenderer {
     this.monsters = onFloor(this.allMonsters, floorId);
   }
 
-  private focusPosition(): { x: number; y: number } | null {
-    if (this.focusTokenId === null) return null;
-    const token = this.tokens.find((t) => t.id === this.focusTokenId);
-    if (!token) return null;
+  private tokenPosition(token: TokenPublic): { x: number; y: number } {
     return this.positionSource
       ? this.positionSource(token.id, token.x, token.y)
       : { x: token.x, y: token.y };
   }
 
-  private rasteriseTerrain(map: FloorMapDTO): void {
-    const off = document.createElement('canvas');
-    off.width = map.width * CACHE_TILE;
-    off.height = map.height * CACHE_TILE;
-    const ctx = off.getContext('2d');
-    if (!ctx) return;
+  private focusPosition(): { x: number; y: number } | null {
+    if (this.focusTokenId === null) return null;
+    const token = this.tokens.find((t) => t.id === this.focusTokenId);
+    if (!token) return null;
+    return this.tokenPosition(token);
+  }
 
-    const tiles = decodeTiles(map.tiles);
-    ctx.fillStyle = MAP_PALETTE.unexplored;
-    ctx.fillRect(0, 0, off.width, off.height);
+  private baseScale(cw: number, ch: number): number {
+    const terrain = this.terrain;
+    if (!terrain || terrain.width === 0 || terrain.height === 0) return 1;
+    return Math.min(cw / terrain.width, ch / terrain.height);
+  }
 
-    for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        const tile = tiles[y * map.width + x] ?? TILE_WALL;
-        if (tile === TILE_WALL) continue;
-        let colour: string = MAP_PALETTE.floor;
-        if (tile === TILE_STAIRS) colour = MAP_PALETTE.stairs;
-        else if (tile === TILE_DOOR) colour = MAP_PALETTE.door;
-        else if ((x + y) % 4 === 0) colour = MAP_PALETTE.floorAlt;
-        ctx.fillStyle = colour;
-        ctx.fillRect(x * CACHE_TILE, y * CACHE_TILE, CACHE_TILE, CACHE_TILE);
-      }
+  private clampPan(cw: number, ch: number): void {
+    const terrain = this.terrain;
+    if (!terrain) return;
+    const scale = this.baseScale(cw, ch) * this.camera.zoom;
+    const mx = Math.max(0, (terrain.width * scale - cw) / 2) + cw * 0.35;
+    const my = Math.max(0, (terrain.height * scale - ch) / 2) + ch * 0.35;
+    this.camera.panX = Math.max(-mx, Math.min(mx, this.camera.panX));
+    this.camera.panY = Math.max(-my, Math.min(my, this.camera.panY));
+  }
+
+  zoomAt(px: number, py: number, factor: number): void {
+    const terrain = this.terrain;
+    if (!terrain) return;
+    const cw = this.canvas.clientWidth;
+    const ch = this.canvas.clientHeight;
+    const base = this.baseScale(cw, ch);
+    const z0 = this.camera.zoom;
+    const z1 = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z0 * factor));
+    if (Math.abs(z1 - z0) < 1e-4) return;
+    const s0 = base * z0;
+    const s1 = base * z1;
+    const wx = (px - ((cw - terrain.width * s0) / 2 + this.camera.panX)) / s0;
+    const wy = (py - ((ch - terrain.height * s0) / 2 + this.camera.panY)) / s0;
+    this.camera.zoom = z1;
+    this.desiredZoom = z1;
+    this.camera.panX = px - wx * s1 - (cw - terrain.width * s1) / 2;
+    this.camera.panY = py - wy * s1 - (ch - terrain.height * s1) / 2;
+    this.clampPan(cw, ch);
+  }
+
+  panBy(dx: number, dy: number): void {
+    this.camera.panX += dx;
+    this.camera.panY += dy;
+    this.clampPan(this.canvas.clientWidth, this.canvas.clientHeight);
+  }
+
+  resetView(): void {
+    this.camera.zoom = 1;
+    this.camera.panX = 0;
+    this.camera.panY = 0;
+    this.desiredZoom = 1;
+  }
+
+  get zoom(): number {
+    return this.camera.zoom;
+  }
+
+  get particleCount(): number {
+    return this.fxLayer.particleCount;
+  }
+
+  private updateCamera(cw: number, ch: number, dtMs: number): void {
+    const terrain = this.terrain;
+    if (!terrain) return;
+
+    if (Math.abs(this.desiredZoom - this.camera.zoom) > 0.001) {
+      const k = this.reduced ? 1 : 1 - Math.exp(-dtMs / ZOOM_TAU);
+      this.camera.zoom += (this.desiredZoom - this.camera.zoom) * k;
+    } else {
+      this.camera.zoom = this.desiredZoom;
     }
 
-    ctx.strokeStyle = MAP_PALETTE.wallInk;
-    ctx.lineWidth = 2;
-    for (let y = 0; y < map.height; y++) {
-      for (let x = 0; x < map.width; x++) {
-        const tile = tiles[y * map.width + x] ?? TILE_WALL;
-        if (tile === TILE_WALL) continue;
-        const left = x === 0 || (tiles[y * map.width + x - 1] ?? TILE_WALL) === TILE_WALL;
-        const right = x + 1 >= map.width || (tiles[y * map.width + x + 1] ?? TILE_WALL) === TILE_WALL;
-        const up = y === 0 || (tiles[(y - 1) * map.width + x] ?? TILE_WALL) === TILE_WALL;
-        const down = y + 1 >= map.height || (tiles[(y + 1) * map.width + x] ?? TILE_WALL) === TILE_WALL;
-        const px = x * CACHE_TILE;
-        const py = y * CACHE_TILE;
-        ctx.beginPath();
-        if (left) {
-          ctx.moveTo(px, py);
-          ctx.lineTo(px, py + CACHE_TILE);
-        }
-        if (right) {
-          ctx.moveTo(px + CACHE_TILE, py);
-          ctx.lineTo(px + CACHE_TILE, py + CACHE_TILE);
-        }
-        if (up) {
-          ctx.moveTo(px, py);
-          ctx.lineTo(px + CACHE_TILE, py);
-        }
-        if (down) {
-          ctx.moveTo(px, py + CACHE_TILE);
-          ctx.lineTo(px + CACHE_TILE, py + CACHE_TILE);
-        }
-        ctx.stroke();
-      }
-    }
+    if (!this.followEnabled) return;
+    const focus = this.focusPosition();
+    if (!focus) return;
 
-    this.terrain = off;
+    const scale = this.baseScale(cw, ch) * this.camera.zoom;
+    const tilePx = CACHE_TILE * scale;
+    const wantX = cw / 2 - (focus.x + 0.5) * tilePx - (cw - terrain.width * scale) / 2;
+    const wantY = ch / 2 - (focus.y + 0.5) * tilePx - (ch - terrain.height * scale) / 2;
+    const k = this.reduced ? 1 : 1 - Math.exp(-dtMs / PAN_TAU);
+    this.camera.panX += (wantX - this.camera.panX) * k;
+    this.camera.panY += (wantY - this.camera.panY) * k;
+    this.clampPan(cw, ch);
   }
 
   private fit(): { scale: number; offsetX: number; offsetY: number } {
@@ -218,15 +278,308 @@ export class MapRenderer {
     if (!map || !terrain) return { scale: 1, offsetX: 0, offsetY: 0 };
     const cw = this.canvas.clientWidth;
     const ch = this.canvas.clientHeight;
-    const base = Math.min(cw / terrain.width, ch / terrain.height);
-    const scale = base * this.camera.zoom;
+    const scale = this.baseScale(cw, ch) * this.camera.zoom;
     const offsetX = (cw - terrain.width * scale) / 2 + this.camera.panX;
     const offsetY = (ch - terrain.height * scale) / 2 + this.camera.panY;
     return { scale, offsetX, offsetY };
   }
 
+  private resolveFx = (fx: FxEvent): FxAnchor | null => {
+    const map = this.map;
+    if (!map) return null;
+    const preferRoom =
+      fx.type === 'ROOM_CLEARED' || fx.type === 'ROOM_LANDMARK' || fx.type === 'RECORD_SET';
+
+    if (!preferRoom && fx.teamId !== null) {
+      const token = this.tokens.find((t) => t.id === fx.teamId);
+      if (token) {
+        const pos = this.tokenPosition(token);
+        return { x: pos.x, y: pos.y, w: 1, h: 1, room: false };
+      }
+    }
+
+    if (fx.roomId !== null) {
+      const room = map.rooms.find((r) => r.id === fx.roomId);
+      if (room) return { x: room.cx, y: room.cy, w: room.w, h: room.h, room: true };
+    }
+
+    if (preferRoom && fx.teamId !== null) {
+      const token = this.tokens.find((t) => t.id === fx.teamId);
+      if (token) {
+        const pos = this.tokenPosition(token);
+        return { x: pos.x, y: pos.y, w: 1, h: 1, room: false };
+      }
+    }
+
+    return null;
+  };
+
+  private paintFog(
+    ctx: CanvasRenderingContext2D,
+    map: FloorMapDTO,
+    offsetX: number,
+    offsetY: number,
+    drawW: number,
+    drawH: number,
+  ): void {
+    if (!this.fogRooms) {
+      if (this.fogMask) {
+        this.fogMask.width = 0;
+        this.fogMask = null;
+      }
+      this.fogMaskKey = '';
+      return;
+    }
+
+    const mw = map.width * FOG_SCALE;
+    const mh = map.height * FOG_SCALE;
+    const key = `${map.id}:${this.focusTokenId ?? 0}`;
+    let mask = this.fogMask;
+
+    if (!mask || this.fogMaskKey !== key || mask.width !== mw || mask.height !== mh) {
+      mask = this.fogMask = document.createElement('canvas');
+      mask.width = mw;
+      mask.height = mh;
+      this.fogMaskKey = key;
+      const seed = mask.getContext('2d');
+      if (seed) {
+        seed.imageSmoothingEnabled = false;
+        seed.fillStyle = '#000';
+        seed.fillRect(0, 0, mw, mh);
+      }
+      this.fogSeeded = false;
+    }
+
+    const mctx = mask.getContext('2d');
+    if (mctx) {
+      mctx.imageSmoothingEnabled = false;
+      mctx.globalCompositeOperation = 'destination-out';
+
+      if (!this.fogSeeded) {
+        mctx.fillStyle = 'rgba(0,0,0,0.85)';
+        for (const idx of this.fogRooms) {
+          const room = map.rooms[idx];
+          if (!room) continue;
+          mctx.fillRect(
+            (room.x - 1) * FOG_SCALE,
+            (room.y - 1) * FOG_SCALE,
+            (room.w + 2) * FOG_SCALE,
+            (room.h + 2) * FOG_SCALE,
+          );
+        }
+
+        if (this.seenTiles) {
+          for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+              const i = y * map.width + x;
+              if (((this.seenTiles[i >> 3] ?? 0) & (1 << (i & 7))) === 0) continue;
+              mctx.fillRect(x * FOG_SCALE, y * FOG_SCALE, FOG_SCALE, FOG_SCALE);
+            }
+          }
+        }
+        this.fogSeeded = true;
+      }
+
+      const tiles = this.mapTiles;
+      if (tiles) {
+        for (const token of this.tokens) {
+          if (this.focusTokenId !== null && token.id !== this.focusTokenId) continue;
+          const pos = this.tokenPosition(token);
+          const ox = Math.round(pos.x);
+          const oy = Math.round(pos.y);
+          forEachVisible(tiles, map.width, map.height, ox, oy, TORCH_TILES, (x, y) => {
+            const dist = Math.hypot(x - ox, y - oy);
+            mctx.fillStyle = `rgba(0,0,0,${torchAlpha(dist)})`;
+            mctx.fillRect(x * FOG_SCALE, y * FOG_SCALE, FOG_SCALE, FOG_SCALE);
+          });
+        }
+      }
+
+      mctx.globalCompositeOperation = 'source-over';
+    }
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'low';
+    ctx.drawImage(mask, offsetX, offsetY, drawW, drawH);
+    ctx.restore();
+  }
+
+  private drawTrails(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number, tilePx: number): void {
+    if (tilePx < 3.5) return;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1, tilePx * 0.16);
+
+    for (const token of this.tokens) {
+      const trail = token.trail;
+      if (!trail || trail.length < 2) continue;
+      const focused = this.focusTokenId === null || this.focusTokenId === token.id;
+      if (this.fogRooms && !focused) continue;
+
+      const pos = this.tokenPosition(token);
+      const colour = teamColor(token.colorIndex);
+      const peak = focused ? 0.42 : 0.18;
+      const pts: Array<[number, number]> = [...trail, [pos.x, pos.y]];
+
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        if (!a || !b) continue;
+        if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) > 6) continue;
+        ctx.strokeStyle = withAlpha(colour, (i / (pts.length - 1)) * peak);
+        ctx.beginPath();
+        ctx.moveTo(offsetX + (a[0] + 0.5) * tilePx, offsetY + (a[1] + 0.5) * tilePx);
+        ctx.lineTo(offsetX + (b[0] + 0.5) * tilePx, offsetY + (b[1] + 0.5) * tilePx);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  private drawRoomTitles(
+    ctx: CanvasRenderingContext2D,
+    map: FloorMapDTO,
+    offsetX: number,
+    offsetY: number,
+    tilePx: number,
+    cw: number,
+    ch: number,
+  ): void {
+    if (tilePx < 7) return;
+    const size = Math.max(9, Math.min(16, tilePx * 0.8));
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.font = `600 ${Math.round(size)}px ${MONO}`;
+    ctx.lineWidth = Math.max(2, size * 0.3);
+    ctx.strokeStyle = MAP_PALETTE.labelInk;
+
+    const claimed: Array<[number, number, number, number]> = [];
+    const order = map.rooms
+      .map((room, i) => ({ title: room.title ?? '', deaths: room.deaths ?? 0, room, i }))
+      .filter((entry) => entry.title !== '')
+      .sort((a, b) => b.deaths - a.deaths);
+
+    for (const { title, deaths, room, i } of order) {
+      if (this.fogRooms && !this.fogRooms.has(i)) continue;
+
+      const sx = offsetX + (room.cx + 0.5) * tilePx;
+      const inside = room.h >= 3;
+      const sy = offsetY + (inside ? room.y + room.h - 0.55 : room.y + room.h + 0.6) * tilePx;
+      if (sx < -tilePx * 8 || sy < -tilePx * 4 || sx > cw + tilePx * 8 || sy > ch + tilePx * 4) continue;
+
+      const label = deaths > 0 ? `${title.toUpperCase()} · ${deaths}†` : title.toUpperCase();
+      const half = ctx.measureText(label).width / 2 + 3;
+      const top = sy - size * 0.75;
+      const bottom = sy + size * 0.75;
+      if (claimed.some((b) => sx - half < b[2] && sx + half > b[0] && top < b[3] && bottom > b[1])) {
+        continue;
+      }
+      claimed.push([sx - half, top, sx + half, bottom]);
+
+      ctx.strokeText(label, sx, sy);
+      ctx.fillStyle = deaths > 0 ? FX_PALETTE.blood : MAP_PALETTE.label;
+      ctx.fillText(label, sx, sy);
+    }
+
+    ctx.restore();
+  }
+
+  private drawMonsters(
+    ctx: CanvasRenderingContext2D,
+    offsetX: number,
+    offsetY: number,
+    tilePx: number,
+    cw: number,
+    ch: number,
+    radius: number,
+    strokeW: number,
+    now: number,
+    isSeen: (x: number, y: number) => boolean,
+  ): void {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const monster of this.monsters) {
+      if (!isSeen(monster.x, monster.y)) continue;
+      const mx = offsetX + (monster.x + 0.5) * tilePx;
+      const my = offsetY + (monster.y + 0.5) * tilePx;
+      if (mx < -tilePx || my < -tilePx || mx > cw + tilePx || my > ch + tilePx) continue;
+
+      const power = Math.min(1, Math.max(0, monster.cr) / 8);
+      const r = Math.max(1.5, radius * (monster.guardian ? 0.95 : 0.5 + power * 0.4));
+      const base = monster.guardian ? FX_PALETTE.guardian : FX_PALETTE.monster;
+      const fill = mixColor(MAP_PALETTE.wallInk, base, 0.45 + power * 0.55);
+
+      if (monster.guardian) {
+        const pulse = this.reduced ? 0.5 : 0.5 + 0.35 * Math.sin(now / 520);
+        ctx.strokeStyle = withAlpha(FX_PALETTE.guardian, 0.2 + pulse * 0.4);
+        ctx.lineWidth = Math.max(1, strokeW);
+        ctx.beginPath();
+        ctx.arc(mx, my, r * 1.65, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        for (let s = 0; s < 4; s++) {
+          const a = (Math.PI / 2) * s + Math.PI / 4;
+          ctx.moveTo(mx + Math.cos(a) * r * 1.2, my + Math.sin(a) * r * 1.2);
+          ctx.lineTo(mx + Math.cos(a) * r * 1.9, my + Math.sin(a) * r * 1.9);
+        }
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(mx, my - r);
+      ctx.lineTo(mx + r, my);
+      ctx.lineTo(mx, my + r);
+      ctx.lineTo(mx - r, my);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = MAP_PALETTE.wallInk;
+      ctx.lineWidth = Math.max(0.75, strokeW * 0.75);
+      ctx.stroke();
+
+      if (monster.hp < monster.hpMax && monster.hpMax > 0 && r >= 4) {
+        const frac = Math.max(0, monster.hp / monster.hpMax);
+        ctx.strokeStyle = withAlpha(FX_PALETTE.blood, 0.9);
+        ctx.lineWidth = Math.max(1, strokeW * 0.9);
+        ctx.beginPath();
+        ctx.arc(mx, my, r * 1.35, -Math.PI * 0.9, -Math.PI * 0.9 + Math.PI * 1.8 * frac);
+        ctx.stroke();
+      }
+
+      if (r >= 7) {
+        ctx.font = `700 ${Math.round(Math.max(8, r * 0.95))}px ${MONO}`;
+        ctx.fillStyle = MAP_PALETTE.wallInk;
+        ctx.fillText(String(Math.round(monster.cr)), mx, my + 0.5);
+      }
+
+      if (monster.guardian && tilePx >= 20) {
+        ctx.font = `600 ${Math.round(Math.max(9, tilePx * 0.42))}px ${MONO}`;
+        ctx.lineWidth = Math.max(2, tilePx * 0.12);
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = MAP_PALETTE.labelInk;
+        ctx.strokeText(monster.name, mx, my - r * 2.1);
+        ctx.fillStyle = FX_PALETTE.guardian;
+        ctx.fillText(monster.name, mx, my - r * 2.1);
+      }
+    }
+
+    ctx.restore();
+  }
+
   draw(): void {
     const started = performance.now();
+    const dtMs = this.lastTs === 0 ? 16 : Math.min(120, started - this.lastTs);
+    this.lastTs = started;
+
+    if (this.fxQueue) this.fxLayer.ingest(this.fxQueue, this.resolveFx, started, this.reduced);
+
     const ctx = this.canvas.getContext('2d');
     const map = this.map;
     const terrain = this.terrain;
@@ -235,142 +588,60 @@ export class MapRenderer {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     const cw = this.canvas.clientWidth;
     const ch = this.canvas.clientHeight;
+    if (cw === 0 || ch === 0) return;
     if (this.canvas.width !== Math.round(cw * this.dpr) || this.canvas.height !== Math.round(ch * this.dpr)) {
       this.canvas.width = Math.round(cw * this.dpr);
       this.canvas.height = Math.round(ch * this.dpr);
     }
+
+    this.updateCamera(cw, ch, dtMs);
 
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = MAP_PALETTE.unexplored;
     ctx.fillRect(0, 0, cw, ch);
 
     const { scale, offsetX, offsetY } = this.fit();
+    const drawW = terrain.width * scale;
+    const drawH = terrain.height * scale;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(terrain, offsetX, offsetY, terrain.width * scale, terrain.height * scale);
+    ctx.drawImage(terrain, offsetX, offsetY, drawW, drawH);
 
-    if (this.fogRooms) {
-      const key = `${map.id}:${this.focusTokenId ?? 0}`;
-      let mask = this.fogMask;
-
-      if (!mask || this.fogMaskKey !== key || mask.width !== map.width || mask.height !== map.height) {
-        mask = this.fogMask = document.createElement('canvas');
-        mask.width = map.width;
-        mask.height = map.height;
-        this.fogMaskKey = key;
-        const mctx = mask.getContext('2d');
-        if (mctx) {
-          mctx.fillStyle = '#000';
-          mctx.fillRect(0, 0, map.width, map.height);
-        }
-        this.fogSeeded = false;
-      }
-
-      const mctx = mask.getContext('2d');
-      if (mctx) {
-        mctx.globalCompositeOperation = 'destination-out';
-
-        if (!this.fogSeeded) {
-          mctx.fillStyle = 'rgba(0,0,0,0.85)';
-          for (const idx of this.fogRooms) {
-            const room = map.rooms[idx];
-            if (!room) continue;
-            mctx.fillRect(room.x - 1, room.y - 1, room.w + 2, room.h + 2);
-          }
-
-          if (this.seenTiles) {
-            for (let y = 0; y < map.height; y++) {
-              for (let x = 0; x < map.width; x++) {
-                const i = y * map.width + x;
-                if (((this.seenTiles[i >> 3] ?? 0) & (1 << (i & 7))) === 0) continue;
-                mctx.fillRect(x, y, 1, 1);
-              }
-            }
-          }
-          this.fogSeeded = true;
-        }
-
-        for (const token of this.tokens) {
-          if (this.focusTokenId !== null && token.id !== this.focusTokenId) continue;
-          const pos = this.positionSource
-            ? this.positionSource(token.id, token.x, token.y)
-            : { x: token.x, y: token.y };
-          const grad = mctx.createRadialGradient(pos.x + 0.5, pos.y + 0.5, 0, pos.x + 0.5, pos.y + 0.5, TORCH_TILES);
-          grad.addColorStop(0, 'rgba(0,0,0,1)');
-          grad.addColorStop(0.6, 'rgba(0,0,0,1)');
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
-          mctx.fillStyle = grad;
-          mctx.beginPath();
-          mctx.arc(pos.x + 0.5, pos.y + 0.5, TORCH_TILES, 0, Math.PI * 2);
-          mctx.fill();
-        }
-
-        mctx.globalCompositeOperation = 'source-over';
-      }
-
-      ctx.save();
-      ctx.globalAlpha = 1;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(mask, offsetX, offsetY, terrain.width * scale, terrain.height * scale);
-      ctx.restore();
-    } else {
-      this.fogMask = null;
-      this.fogMaskKey = '';
-    }
+    this.paintFog(ctx, map, offsetX, offsetY, drawW, drawH);
 
     const tilePx = CACHE_TILE * scale;
-    const radius = Math.max(5, tilePx * 0.42);
+    const strokeW = Math.max(0.75, Math.min(2, tilePx * 0.1));
+    const radius = Math.max(1.5, tilePx * 0.44 - strokeW);
 
     const focus = this.focusPosition();
 
     const isSeen = (x: number, y: number): boolean => {
       if (!this.fogRooms) return true;
-      if (focus) {
-        const dx = x - focus.x;
-        const dy = y - focus.y;
-        if (dx * dx + dy * dy <= TORCH_TILES * TORCH_TILES) return true;
+      if (focus && this.mapTiles) {
+        const ox = Math.round(focus.x);
+        const oy = Math.round(focus.y);
+        const dx = x - ox;
+        const dy = y - oy;
+        if (
+          dx * dx + dy * dy <= TORCH_TILES * TORCH_TILES &&
+          hasLineOfSight(this.mapTiles, map.width, map.height, ox, oy, x, y)
+        ) {
+          return true;
+        }
       }
-      if (!this.seenTiles || !map) return false;
+      if (!this.seenTiles) return false;
       const i = y * map.width + x;
       return ((this.seenTiles[i >> 3] ?? 0) & (1 << (i & 7))) !== 0;
     };
 
-    for (const monster of this.monsters) {
-      if (!isSeen(monster.x, monster.y)) continue;
-      const mx = offsetX + (monster.x + 0.5) * tilePx;
-      const my = offsetY + (monster.y + 0.5) * tilePx;
-      if (mx < -tilePx || my < -tilePx || mx > cw + tilePx || my > ch + tilePx) continue;
+    this.drawTrails(ctx, offsetX, offsetY, tilePx);
+    this.drawRoomTitles(ctx, map, offsetX, offsetY, tilePx, cw, ch);
+    this.drawMonsters(ctx, offsetX, offsetY, tilePx, cw, ch, radius, strokeW, started, isSeen);
 
-      const r = Math.max(4, radius * (monster.guardian ? 0.85 : 0.62));
-      ctx.beginPath();
-      ctx.moveTo(mx, my - r);
-      ctx.lineTo(mx + r, my);
-      ctx.lineTo(mx, my + r);
-      ctx.lineTo(mx - r, my);
-      ctx.closePath();
-      ctx.fillStyle = monster.guardian ? '#B892F1' : '#E64F3E';
-      ctx.fill();
-      ctx.strokeStyle = '#050403';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      if (monster.guardian && r >= 5) {
-        ctx.beginPath();
-        ctx.arc(mx, my, r * 1.5, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(184, 146, 241, 0.55)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    ctx.lineWidth = 2;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `700 ${Math.max(8, Math.round(radius * 0.85))}px ui-sans-serif, system-ui, sans-serif`;
 
     for (const token of this.tokens) {
-      const pos = this.positionSource
-        ? this.positionSource(token.id, token.x, token.y)
-        : { x: token.x, y: token.y };
+      const pos = this.tokenPosition(token);
       const cx = offsetX + (pos.x + 0.5) * tilePx;
       const cy = offsetY + (pos.y + 0.5) * tilePx;
       if (cx < -tilePx || cy < -tilePx || cx > cw + tilePx || cy > ch + tilePx) continue;
@@ -380,26 +651,31 @@ export class MapRenderer {
       ctx.globalAlpha = dimmed ? 0.55 : 1;
 
       if (this.focusTokenId === token.id) {
+        const pulse = this.reduced ? 0 : 0.12 * Math.sin(started / 420);
         ctx.beginPath();
-        ctx.arc(cx, cy, radius * 2.1, 0, Math.PI * 2);
-        ctx.strokeStyle = '#FFBE4D';
-        ctx.lineWidth = 2;
+        ctx.arc(cx, cy, radius * (1.9 + pulse) + strokeW, 0, Math.PI * 2);
+        ctx.strokeStyle = FX_PALETTE.clash;
+        ctx.lineWidth = Math.max(1.25, strokeW);
         ctx.stroke();
-        ctx.lineWidth = 2;
       }
 
       ctx.fillStyle = teamColor(token.colorIndex);
-      ctx.strokeStyle = '#050403';
+      ctx.strokeStyle = MAP_PALETTE.wallInk;
+      ctx.lineWidth = strokeW;
       drawShape(ctx, teamShape(token.colorIndex), cx, cy, radius);
       ctx.fill();
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      if (radius >= 9) {
-        ctx.fillStyle = '#050403';
+      if (radius >= 7) {
+        ctx.font = `700 ${Math.round(radius * 0.95)}px ui-sans-serif, system-ui, sans-serif`;
+        ctx.fillStyle = MAP_PALETTE.wallInk;
         ctx.fillText(token.monogram, cx, cy + 0.5);
       }
     }
+
+    this.fxLayer.step(started, dtMs, this.reduced);
+    this.fxLayer.draw(ctx, { offsetX, offsetY, tilePx, width: cw, height: ch }, started);
 
     this.lastFrameMs = performance.now() - started;
   }
@@ -415,13 +691,11 @@ export class MapRenderer {
   stop(): void {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
+    this.fxLayer.clearParticles();
+    this.fxQueue = null;
     if (this.terrain) {
       this.terrain.width = 0;
       this.terrain = null;
-    }
-    if (this.fogLayer) {
-      this.fogLayer.width = 0;
-      this.fogLayer = null;
     }
     if (this.fogMask) {
       this.fogMask.width = 0;

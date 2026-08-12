@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { FloorMapDTO } from '@donjon/shared';
   import { MapRenderer } from '../canvas/renderer.js';
+  import { createDirectorState, pickTeam, DRAMA_WINDOW_MS, type DirectorState } from '../canvas/director.js';
   import { interpolate } from '../applyFrame.js';
   import { followFloor } from '../floorview.js';
   import { useMotion, useSim } from '../store.svelte.js';
@@ -16,7 +17,7 @@
   function decodeTiles(floorId: number): Uint8Array | null {
     const b64 = sim.fogTiles[String(floorId)];
     if (!b64) return null;
-    const key = `${floorId}:${b64.length}:${b64.slice(-24)}`;
+    const key = `${floorId}:${b64}`;
     if (key === tilesCacheKey) return tilesCache;
     const bin = atob(b64);
     const out = new Uint8Array(bin.length);
@@ -32,6 +33,14 @@
   let loadedFloor = $state(0);
   let loadRequest = $state(0);
   let followedFloor = $state<number | null>(null);
+  let reducedMotion = $state(false);
+  let viewMoved = $state(false);
+
+  let directorState: DirectorState = createDirectorState();
+  let dragging = false;
+  let dragX = 0;
+  let dragY = 0;
+  let dragDistance = 0;
 
   const mapCache = new Map<number, FloorMapDTO>();
 
@@ -60,6 +69,88 @@
     }
   }
 
+  function releaseAuto(): void {
+    if (sim.follow) sim.follow = false;
+    if (sim.director) sim.director = false;
+  }
+
+  function markMoved(): void {
+    viewMoved = true;
+  }
+
+  function resetView(): void {
+    renderer?.resetView();
+    viewMoved = false;
+  }
+
+  function zoomStep(factor: number): void {
+    if (!renderer) return;
+    renderer.zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, factor);
+    markMoved();
+  }
+
+  function onPointerDown(event: PointerEvent): void {
+    if (!renderer || event.button !== 0) return;
+    dragging = true;
+    dragDistance = 0;
+    dragX = event.clientX;
+    dragY = event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    if (!dragging || !renderer) return;
+    const dx = event.clientX - dragX;
+    const dy = event.clientY - dragY;
+    dragX = event.clientX;
+    dragY = event.clientY;
+    dragDistance += Math.abs(dx) + Math.abs(dy);
+    if (dragDistance > 4) releaseAuto();
+    renderer.panBy(dx, dy);
+    markMoved();
+  }
+
+  function onPointerUp(event: PointerEvent): void {
+    if (!dragging) return;
+    dragging = false;
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  }
+
+  function onKeyDown(event: KeyboardEvent): void {
+    if (!renderer || event.ctrlKey || event.metaKey || event.altKey) return;
+    const step = event.shiftKey ? 120 : 40;
+    switch (event.key) {
+      case 'ArrowLeft':
+        renderer.panBy(step, 0);
+        break;
+      case 'ArrowRight':
+        renderer.panBy(-step, 0);
+        break;
+      case 'ArrowUp':
+        renderer.panBy(0, step);
+        break;
+      case 'ArrowDown':
+        renderer.panBy(0, -step);
+        break;
+      case '+':
+      case '=':
+        zoomStep(1.25);
+        break;
+      case '-':
+      case '_':
+        zoomStep(0.8);
+        break;
+      case '0':
+        resetView();
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    releaseAuto();
+    markMoved();
+  }
+
   onMount(() => {
     const r = new MapRenderer(canvas);
     renderer = r;
@@ -68,12 +159,32 @@
       mapCache.set(sim.floorMap.id, sim.floorMap);
     }
 
+    const query = matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion = query.matches;
+    const onQuery = (): void => {
+      reducedMotion = query.matches;
+    };
+    query.addEventListener('change', onQuery);
+
+    const onWheel = (event: WheelEvent): void => {
+      event.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1;
+      const factor = Math.exp(-event.deltaY * unit * 0.0018);
+      r.zoomAt(event.clientX - rect.left, event.clientY - rect.top, factor);
+      releaseAuto();
+      markMoved();
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+
     const meter = setInterval(() => {
       frameMs = Math.round(r.lastFrameMs * 100) / 100;
     }, 1000);
 
     return () => {
       clearInterval(meter);
+      query.removeEventListener('change', onQuery);
+      canvas.removeEventListener('wheel', onWheel);
       r.stop();
       mapCache.clear();
       renderer = null;
@@ -146,13 +257,43 @@
     renderer.setFog(fogForFloor, sightForFloor, sim.selectedTeam, decodeTiles(loadedFloor));
 
     if (!motion) return;
-    const reduced =
-      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    renderer.setFxQueue(motion.fx);
     renderer.setPositionSource(
-      reduced
-        ? null
-        : (id, fx, fy) => interpolate(motion, id, sim.playbackTick, fx, fy),
+      reducedMotion ? null : (id, fx, fy) => interpolate(motion, id, sim.playbackTick, fx, fy),
     );
+  });
+
+  $effect(() => {
+    renderer?.setReducedMotion(reducedMotion);
+  });
+
+  $effect(() => {
+    const auto = sim.follow || sim.director;
+    renderer?.setFollow(auto);
+    if (auto) viewMoved = false;
+  });
+
+  $effect(() => {
+    if (!sim.director) {
+      directorState = createDirectorState();
+      return;
+    }
+    const cut = (): void => {
+      const r = renderer;
+      if (!r) return;
+      const now = performance.now();
+      directorState = pickTeam(directorState, {
+        teams: sim.teams,
+        drama: r.dramaSince(now - DRAMA_WINDOW_MS),
+        now,
+      });
+      if (directorState.teamId !== null && directorState.teamId !== sim.selectedTeam) {
+        sim.autoSelect = true;
+        sim.selectedTeam = directorState.teamId;
+      }
+    };
+    const timer = setInterval(cut, 450);
+    return () => clearInterval(timer);
   });
 
   $effect(() => {
@@ -179,6 +320,8 @@
   });
 
   const floorInfo = $derived(sim.floors.find((f) => f.id === loadedFloor));
+
+  const autoMode = $derived(sim.director ? 'director' : sim.follow ? 'follow' : 'free');
 
   const mapSummary = $derived(
     floorInfo
@@ -209,13 +352,57 @@
     <div class="relative min-h-0 flex-1">
       <canvas
         bind:this={canvas}
-        class="absolute inset-0 size-full touch-none"
+        class="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing"
         tabindex="0"
         role="application"
         aria-label={mapSummary}
+        onpointerdown={onPointerDown}
+        onpointermove={onPointerMove}
+        onpointerup={onPointerUp}
+        onpointercancel={onPointerUp}
+        onkeydown={onKeyDown}
       ></canvas>
+
+      <div class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
+        <p
+          class="font-mono text-micro uppercase tracking-widest {autoMode === 'free'
+            ? 'text-stone-400'
+            : 'text-torch-300'}"
+        >
+          {autoMode === 'director' ? 'Director' : autoMode === 'follow' ? 'Follow' : 'Free look'}
+        </p>
+        <div class="pointer-events-auto flex gap-1">
+          <button
+            type="button"
+            class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro text-parchment-200 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
+            onclick={() => zoomStep(0.8)}
+          >
+            <span aria-hidden="true">–</span><span class="sr-only">Zoom the map out</span>
+          </button>
+          <button
+            type="button"
+            class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro text-parchment-200 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
+            onclick={() => zoomStep(1.25)}
+          >
+            <span aria-hidden="true">+</span><span class="sr-only">Zoom the map in</span>
+          </button>
+          <button
+            type="button"
+            class="ink bg-stone-900/90 px-2 py-1 font-mono text-micro uppercase tracking-widest {viewMoved
+              ? 'text-torch-300'
+              : 'text-stone-400'} hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-torch-300"
+            onclick={resetView}
+          >
+            Reset view
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
   <p class="sr-only">{mapSummary}</p>
+  <p class="sr-only">
+    Map view controls: focus the map, then use the arrow keys to pan, plus and minus to zoom, and
+    zero to reset the view. Mouse wheel zooms toward the pointer and dragging pans.
+  </p>
 </section>

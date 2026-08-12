@@ -51,6 +51,11 @@ export class SimStore {
   tavernSize = $state(0);
   selectedFloor = $state(1);
   selectedTeam = $state<number | null>(null);
+  selectedHero = $state<number | null>(null);
+  autoSelect = $state(false);
+  drawerOpen = $state(false);
+  director = $state(false);
+  follow = $state(false);
   playbackTick = $state(0);
   fog = $state<Record<string, number[]> | null>(null);
   sight = $state<number[]>([]);
@@ -71,6 +76,11 @@ export class SimStore {
 
   get heroesAlive(): number {
     return this.teams.reduce((n, t) => n + t.heroes.filter((h) => h.alive).length, 0);
+  }
+
+  get selectedTeamData(): TeamPublic | null {
+    if (this.selectedTeam === null) return null;
+    return this.teams.find((t) => t.id === this.selectedTeam) ?? null;
   }
 
   applyBootstrap(boot: BootstrapDTO): void {

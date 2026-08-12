@@ -1,14 +1,59 @@
-import type { FrameDTO, MoveLeg, Op } from '@donjon/shared';
-import type { SimStore } from './store.svelte.js';
+import type { EventDTO, EventType, FrameDTO, MoveLeg, Severity } from '@donjon/shared';
+import { TICKER_CAPACITY, type SimStore } from './store.svelte.js';
 
 export type ApplyResult = 'ok' | 'gap';
 
+export interface FxEvent {
+  id: number;
+  tick: number;
+  type: EventType;
+  severity: Severity;
+  teamId: number | null;
+  roomId: number | null;
+  born: number;
+}
+
+export const FX_CAPACITY = 60;
+
+export const FX_TYPES: ReadonlySet<EventType> = new Set<EventType>([
+  'COMBAT_START',
+  'COMBAT_END',
+  'MONSTER_DOWN',
+  'HERO_DOWN',
+  'HERO_DEATH',
+  'TEAM_WIPE',
+  'LOOT_FOUND',
+  'TRAP_SPRUNG',
+  'TRAP_DISARMED',
+  'HERO_LEVEL_UP',
+  'ROOM_CLEARED',
+  'FLOOR_DESCEND',
+  'HERO_NEMESIS_SLAIN',
+  'RECORD_SET',
+  'ROOM_LANDMARK',
+]);
+
 export interface MotionState {
   legs: Map<number, MoveLeg[]>;
+  fx: FxEvent[];
 }
 
 export function createMotion(): MotionState {
-  return { legs: new Map() };
+  return { legs: new Map(), fx: [] };
+}
+
+function pushFx(motion: MotionState, e: EventDTO): void {
+  if (!FX_TYPES.has(e.type)) return;
+  motion.fx.push({
+    id: e.id,
+    tick: e.tick,
+    type: e.type,
+    severity: e.severity,
+    teamId: e.teamId,
+    roomId: e.roomId,
+    born: performance.now(),
+  });
+  if (motion.fx.length > FX_CAPACITY) motion.fx.splice(0, motion.fx.length - FX_CAPACITY);
 }
 
 export function applyFrame(sim: SimStore, motion: MotionState, frame: FrameDTO): ApplyResult {
@@ -84,7 +129,8 @@ export function applyFrame(sim: SimStore, motion: MotionState, frame: FrameDTO):
         if (op.e.id > sim.maxEventId) {
           sim.maxEventId = op.e.id;
           const merged = [...sim.ticker, op.e];
-          sim.ticker = merged.slice(Math.max(0, merged.length - 200));
+          sim.ticker = merged.slice(Math.max(0, merged.length - TICKER_CAPACITY));
+          pushFx(motion, op.e);
         }
         break;
 

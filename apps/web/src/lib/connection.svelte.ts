@@ -62,7 +62,11 @@ export function connect(store: SimStore, motion: MotionState, streamUrl = '/api/
     try {
       if (eventName === 'snapshot') {
         const snap = JSON.parse(data) as SnapshotDTO;
-        if (snap.seq < store.seq) store.maxEventId = 0;
+        if (snap.seq < store.seq) {
+          store.maxEventId = 0;
+          store.ticker = [];
+          motion.fx.length = 0;
+        }
         motion.legs.clear();
         store.applySnapshot(snap);
       } else {
