@@ -1,6 +1,111 @@
 @import 'tailwindcss';
 
-@theme {
+@font-face {
+  font-family: 'Lilita One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/lilita-one-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lilita One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/lilita-one-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/fonts/atkinson-hyperlegible-next-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/fonts/atkinson-hyperlegible-next-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@theme static {
   --color-ink-900: #14110d;
   --color-ink-800: #1f1a15;
   --color-ink-700: #2a241c;
@@ -160,6 +265,64 @@
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-rank: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --color-sev-0: var(--color-stone-400);
+  --color-sev-1: var(--color-parchment-200);
+  --color-sev-2: var(--color-torch-300);
+  --color-sev-3: var(--color-blood-300);
+  --color-sev-0-on-panel: var(--color-stone-600);
+  --color-sev-1-on-panel: var(--color-ink-800);
+  --color-sev-2-on-panel: var(--color-torch-700);
+  --color-sev-3-on-panel: var(--color-blood-700);
+  --color-sev-0-wash: rgba(158, 142, 115, 0.1);
+  --color-sev-1-wash: rgba(245, 231, 194, 0.12);
+  --color-sev-2-wash: rgba(255, 190, 77, 0.16);
+  --color-sev-3-wash: rgba(214, 48, 31, 0.22);
+
+  --color-dossier: var(--color-parchment-50);
+  --color-dossier-sunken: var(--color-parchment-200);
+  --color-dossier-edge: var(--color-ink-900);
+  --color-dossier-tab: var(--color-parchment-300);
+  --color-dossier-rule: rgba(20, 17, 13, 0.22);
+
+  --color-tab-idle: var(--color-stone-800);
+  --color-tab-active: var(--color-parchment-200);
+  --color-torchlight: rgba(252, 163, 30, 0.11);
+  --color-grain: rgba(247, 242, 233, 0.028);
+
+  --animate-ember: ember 3.4s var(--ease-token) infinite;
+  --animate-flare: flare 700ms var(--ease-settle) 1;
+  --animate-dossier-in: dossier-in 220ms var(--ease-settle) 1;
+
+  @keyframes ember {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    45% {
+      opacity: 0.45;
+    }
+  }
+
+  @keyframes flare {
+    from {
+      background-color: var(--color-sev-2-wash);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+
+  @keyframes dossier-in {
+    from {
+      opacity: 0;
+      transform: translateX(1.25rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }
 
 @utility ink {
@@ -182,11 +345,31 @@
 
   body {
     background-color: var(--color-surface);
+    background-image:
+      radial-gradient(120% 70% at 50% -10%, var(--color-torchlight) 0%, transparent 62%),
+      repeating-linear-gradient(
+        0deg,
+        var(--color-grain) 0px,
+        var(--color-grain) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    background-attachment: fixed;
     color: var(--color-on-surface);
     font-family: var(--font-sans);
     font-size: var(--text-body);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-stone-600) transparent;
+  }
+
+  ::selection {
+    background-color: var(--color-torch-300);
+    color: var(--color-ink-900);
   }
 
   :focus-visible {
@@ -199,6 +382,17 @@
   table,
   .tabular {
     font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
