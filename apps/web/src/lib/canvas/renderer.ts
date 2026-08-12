@@ -10,8 +10,8 @@ export { CACHE_TILE, TILE_DOOR, TILE_FLOOR, TILE_STAIRS, TILE_WALL };
 
 const TORCH_TILES = 6.5;
 const FOG_SCALE = 4;
-const UNFOLD_TILE_PX = 26;
-const MONSTER_LABEL_TILE_PX = 22;
+const UNFOLD_TILE_PX = 34;
+const MONSTER_LABEL_TILE_PX = 28;
 
 const CLASS_GLYPHS: Record<string, string> = {
   sabreur: '/',
@@ -549,6 +549,7 @@ export class MapRenderer {
     ctx.textBaseline = 'middle';
 
     const claimed: Array<[number, number, number, number]> = [];
+    const groups = new Map<string, { name: string; count: number; sumX: number; topY: number; r: number }>();
 
     for (const monster of this.monsters) {
       if (!isSeen(monster.x, monster.y)) continue;
@@ -604,29 +605,51 @@ export class MapRenderer {
         ctx.fillText(String(Math.round(monster.cr)), mx, my + 0.5);
       }
 
-      const showLabel = monster.guardian ? tilePx >= 20 : tilePx >= MONSTER_LABEL_TILE_PX;
-      if (showLabel) {
-        const size = monster.guardian
-          ? Math.max(9, tilePx * 0.42)
-          : Math.max(8, tilePx * 0.32);
+      if (monster.guardian && tilePx >= 20) {
+        const size = Math.max(9, tilePx * 0.42);
         const ly = my - r * 2.1;
         ctx.font = `600 ${Math.round(size)}px ${MONO}`;
+        ctx.lineWidth = Math.max(2, tilePx * 0.12);
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = MAP_PALETTE.labelInk;
+        ctx.strokeText(monster.name, mx, ly);
+        ctx.fillStyle = FX_PALETTE.guardian;
+        ctx.fillText(monster.name, mx, ly);
         const half = ctx.measureText(monster.name).width / 2 + 3;
-        const top = ly - size * 0.75;
-        const bottom = ly + size * 0.75;
-        const clash = claimed.some(
-          (b) => mx - half < b[2] && mx + half > b[0] && top < b[3] && bottom > b[1],
-        );
-        if (monster.guardian || !clash) {
-          claimed.push([mx - half, top, mx + half, bottom]);
-          ctx.lineWidth = Math.max(2, tilePx * 0.12);
-          ctx.lineJoin = 'round';
-          ctx.strokeStyle = MAP_PALETTE.labelInk;
-          ctx.strokeText(monster.name, mx, ly);
-          ctx.fillStyle = monster.guardian ? FX_PALETTE.guardian : MAP_PALETTE.label;
-          ctx.fillText(monster.name, mx, ly);
+        claimed.push([mx - half, ly - size * 0.75, mx + half, ly + size * 0.75]);
+      } else if (tilePx >= MONSTER_LABEL_TILE_PX) {
+        const key = `${monster.floorId}:${monster.roomIdx}:${monster.name}`;
+        const group = groups.get(key);
+        if (group) {
+          group.count += 1;
+          group.sumX += mx;
+          group.topY = Math.min(group.topY, my);
+          group.r = Math.max(group.r, r);
+        } else {
+          groups.set(key, { name: monster.name, count: 1, sumX: mx, topY: my, r });
         }
       }
+    }
+
+    ctx.lineWidth = Math.max(2, tilePx * 0.12);
+    ctx.lineJoin = 'round';
+    for (const group of groups.values()) {
+      const label = group.count > 1 ? `${group.name} ×${group.count}` : group.name;
+      const size = Math.max(8, tilePx * 0.32);
+      const gx = group.sumX / group.count;
+      const gy = group.topY - group.r * 2.1;
+      ctx.font = `600 ${Math.round(size)}px ${MONO}`;
+      const half = ctx.measureText(label).width / 2 + 3;
+      const top = gy - size * 0.75;
+      const bottom = gy + size * 0.75;
+      if (claimed.some((b) => gx - half < b[2] && gx + half > b[0] && top < b[3] && bottom > b[1])) {
+        continue;
+      }
+      claimed.push([gx - half, top, gx + half, bottom]);
+      ctx.strokeStyle = MAP_PALETTE.labelInk;
+      ctx.strokeText(label, gx, gy);
+      ctx.fillStyle = MAP_PALETTE.label;
+      ctx.fillText(label, gx, gy);
     }
 
     ctx.restore();
@@ -690,14 +713,6 @@ export class MapRenderer {
       }
     }
 
-    ctx.font = `700 ${Math.round(Math.max(8, tilePx * 0.28))}px ${MONO}`;
-    ctx.lineWidth = Math.max(2, tilePx * 0.08);
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = MAP_PALETTE.labelInk;
-    const ly = y0 - rowGap * 0.5 - rp * 1.6;
-    ctx.strokeText(token.monogram, cx, ly);
-    ctx.fillStyle = colour;
-    ctx.fillText(token.monogram, cx, ly);
   }
 
   draw(): void {
