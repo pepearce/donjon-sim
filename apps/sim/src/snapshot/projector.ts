@@ -24,6 +24,7 @@ import { narrate, type LoadedPack } from '@donjon/content';
 import { EPOCH } from '../epoch.js';
 import { MONSTERS } from '../engine/tables.js';
 import { lineOf } from '../engine/systems/formation.js';
+import { rungOf } from '../engine/systems/standing.js';
 import { RARITY_NAMES, floorOf, heroById, itemsOf, roomTitle, roster, xpToNext } from '../engine/world.js';
 import type { Floor, Hero, World } from '../engine/types.js';
 
@@ -245,7 +246,7 @@ export function describeEvent(
     case 'WAGE_PAID':
       return `The Keeper paid ${NUM(payload['cp'])}cp in wages to ${NUM(payload['staff'])} staff`;
     case 'KEEPER_DECREE':
-      return `Keeper's decree: ${STR(payload['text'])}`;
+      return `${world.dungeon.keeperName || 'The Keeper'}'s decree: ${STR(payload['text'])}`;
     case 'KHAN_LOAN':
       return `The Grand Khan's loan of ${NUM(payload['cp'])}cp was ${STR(payload['action'])}`;
     case 'REST':
@@ -314,6 +315,21 @@ export function describeEvent(
       return `${NUM(payload['count'])} of the staff walked off the job unpaid`;
     case 'KHAN_FORECLOSURE':
       return `The Grand Khan foreclosed on the dungeon after ${NUM(payload['days'])} days of insolvency, ${NUM(payload['debtCp'])}cp outstanding`;
+    case 'KEEPER_RUNG_CHANGED':
+      return `The Khan's regard shifts: ${STR(payload['from'])} to ${STR(payload['to'])} — ${STR(payload['text'])}`;
+    case 'KHAN_OVERSEER':
+      return payload['action'] === 'installed'
+        ? `The Khan installs ${STR(payload['overseer'])} as overseer — ${STR(payload['text'])}`
+        : `${STR(payload['overseer'])} is recalled by the Khan — ${STR(payload['text'])}`;
+    case 'KEEPER_GAMBIT': {
+      if (payload['action'] === 'declared') {
+        return `The Keeper stakes ${NUM(payload['stakeCp'])}cp on a gambit: ${NUM(payload['targetCp'])}cp of tolls in ${NUM(payload['days'])} days — ${STR(payload['text'])}`;
+      }
+      if (payload['action'] === 'won') {
+        return `The gambit pays double — ${NUM(payload['stakeCp'] )}cp becomes ${NUM(payload['stakeCp']) * 2}cp — ${STR(payload['text'])}`;
+      }
+      return `The gambit fails, ${NUM(payload['stakeCp'])}cp forfeit to the Khan — ${STR(payload['text'])}`;
+    }
     default:
       return `${type} ${JSON.stringify(payload)}`;
   }
@@ -444,14 +460,22 @@ function projectRecords(world: World): RecordRowDTO[] {
 
 export function projectKeeper(world: World): KeeperPublic {
   const d = world.dungeon;
+  const rung = rungOf(d.standing);
   return {
-    name: '',
-    trait: '',
-    standing: 50,
-    rung: 'good',
-    overseer: false,
-    overseerName: '',
-    gambit: null,
+    name: d.keeperName,
+    trait: d.keeperTrait,
+    standing: Math.round(d.standing),
+    rung,
+    overseer: rung === 'overseer',
+    overseerName: d.overseerName,
+    gambit: d.gambit
+      ? {
+          stakeCp: d.gambit.stakeCp,
+          targetCp: d.gambit.targetCp,
+          collectedCp: Math.round(d.gambit.collectedCp),
+          daysLeft: Math.max(0, Math.ceil((d.gambit.endsTick - world.tick) / DAY_TICKS)),
+        }
+      : null,
     treasuryCp: Math.round(d.treasuryCp),
     loanCp: Math.round(d.loanCp),
     austerity: d.austerity,
