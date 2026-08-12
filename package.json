@@ -12,7 +12,7 @@
   "scripts": {
     "sim": "tsx apps/sim/src/main.ts",
     "web": "npm -w @donjon/web run dev",
-    "check": "tsc --build && npm -w @donjon/web exec svelte-check -- --threshold error",
+    "check": "npm -w @donjon/web exec svelte-kit sync && tsc --build && npm -w @donjon/web exec svelte-check -- --threshold error",
     "test": "vitest run"
   },
   "devDependencies": {
