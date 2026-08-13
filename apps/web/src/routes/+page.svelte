@@ -5,7 +5,6 @@
   import EventTicker from '$lib/components/EventTicker.svelte';
   import KeeperPanel from '$lib/components/KeeperPanel.svelte';
   import MapPanel from '$lib/components/MapPanel.svelte';
-  import SpeedControl from '$lib/components/SpeedControl.svelte';
   import StatCard from '$lib/components/StatCard.svelte';
   import TeamDrawer from '$lib/components/TeamDrawer.svelte';
   import TeamRoster from '$lib/components/TeamRoster.svelte';
@@ -167,7 +166,6 @@
       >
         CODEX
       </button>
-      <SpeedControl />
       <ConnectionBanner />
     </div>
   </header>

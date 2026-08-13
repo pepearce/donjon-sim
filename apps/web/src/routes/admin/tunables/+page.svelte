@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SpeedControl from '$lib/components/SpeedControl.svelte';
+
   interface Tunable {
     key: string;
     group: string;
@@ -131,19 +133,22 @@
         Live knobs the keeper's economy and rosters run on. Changes take effect immediately.
       </p>
     </div>
-    <input
-      class="ml-auto w-56 rounded-sm ink-hair border-stone-700 bg-stone-900 px-2 py-1.5 text-body-sm text-parchment-100 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-focus"
-      placeholder="Search…"
-      aria-label="Search tunables"
-      bind:value={search}
-    />
-    <button
-      type="button"
-      class="rounded-sm border border-blood-400 px-3 py-1.5 font-mono text-micro text-blood-300 hover:bg-blood-400/15"
-      onclick={resetAll}
-    >
-      RESET ALL
-    </button>
+    <div class="flex items-center gap-3">
+      <SpeedControl />
+      <input
+        class="w-56 rounded-sm ink-hair border-stone-700 bg-stone-900 px-2 py-1.5 text-body-sm text-parchment-100 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-focus"
+        placeholder="Search…"
+        aria-label="Search tunables"
+        bind:value={search}
+      />
+      <button
+        type="button"
+        class="rounded-sm border border-blood-400 px-3 py-1.5 font-mono text-micro text-blood-300 hover:bg-blood-400/15"
+        onclick={resetAll}
+      >
+        RESET ALL
+      </button>
+    </div>
   </header>
 
   {#if error}
