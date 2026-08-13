@@ -20,6 +20,8 @@ export const ECON = defineTunables('economy', {
   rationBurnEvery: { default: 10, min: 1, max: 1000, label: 'Ration burn cadence' },
   campBurnEvery: { default: 5, min: 1, max: 1000, label: 'Camp ration burn cadence' },
   rationCap: { default: 60, min: 1, max: 10_000, label: 'Ration cap' },
+  rationResupply: { default: 12, min: 0, max: 1000, label: 'Rations gained per funded upkeep' },
+  rationShortfall: { default: 6, min: 0, max: 1000, label: 'Rations lost per unfunded upkeep' },
 });
 
 export function priceIndex(circulating: number): number {
@@ -173,7 +175,7 @@ export function dailyUpkeep(world: World): void {
     const spend = Math.min(team.goldCp, upkeep);
     team.goldCp -= spend;
     world.dungeon.sinkCp += spend;
-    team.rations = clamp(0, 60, team.rations + (spend >= upkeep ? 12 : -6));
+    team.rations = clamp(0, ECON.rationCap, team.rations + (spend >= upkeep ? ECON.rationResupply : -ECON.rationShortfall));
   }
 }
 

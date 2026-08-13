@@ -103,14 +103,17 @@ function weightedPick(world: World, rng: Rng, actions: KeeperActionDef[]): Keepe
   return actions[actions.length - 1] as KeeperActionDef;
 }
 
+function decree(world: World, action: KeeperActionDef): string {
+  emit(world, { type: 'KEEPER_DECREE', payload: { decree: action.id, text: action.text } });
+  return action.text;
+}
+
 function applyRates(world: World, action: KeeperActionDef): string {
   const d = world.dungeon;
   if (action.tollBp !== undefined) d.tollBp = action.tollBp;
   if (action.entryFeeCp !== undefined) d.entryFeeCp = action.entryFeeCp;
   if (action.corpseTaxBp !== undefined) d.corpseTaxBp = action.corpseTaxBp;
-
-  emit(world, { type: 'KEEPER_DECREE', payload: { decree: action.id, text: action.text } });
-  return action.text;
+  return decree(world, action);
 }
 
 function hireGuardian(world: World, rng: Rng): string {
@@ -158,8 +161,7 @@ function openScheme(world: World): string {
 
 function declareAusterity(world: World, action: KeeperActionDef): string {
   world.dungeon.austerity = true;
-  emit(world, { type: 'KEEPER_DECREE', payload: { decree: action.id, text: action.text } });
-  return action.text;
+  return decree(world, action);
 }
 
 export function keeperAct(world: World): string {

@@ -29,11 +29,7 @@ export function setRecord(
   };
 
   if (existing) {
-    existing.label = entry.label;
-    existing.value = entry.value;
-    existing.holder = entry.holder;
-    existing.teamName = entry.teamName;
-    existing.tick = entry.tick;
+    Object.assign(existing, entry);
   } else {
     records.push(entry);
     records.sort((a, b) => RECORD_KINDS.indexOf(a.kind) - RECORD_KINDS.indexOf(b.kind));

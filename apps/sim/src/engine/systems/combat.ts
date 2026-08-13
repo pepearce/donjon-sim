@@ -1,7 +1,7 @@
 import { RngDomain, rngFor, type Rng } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { floorOf, itemsOf, livingRoster, monstersIn, roster } from '../world.js';
-import { BLEED_OUT_TICKS, clamp, pushHistory, statMod, type Hero, type Monster, type Team, type World } from '../types.js';
+import { BLEED_OUT_TICKS, clamp, pickWeighted, pushHistory, statMod, type Hero, type Monster, type Team, type World } from '../types.js';
 import { awardXp } from './progression.js';
 import { dropLoot } from './loot.js';
 import { awardEpithet } from './epithets.js';
@@ -10,20 +10,22 @@ import { griefMultiplier, linkAllPairs, linkPair } from './relations.js';
 import { setRecord } from './records.js';
 import { hasTrait, traitCount } from './traits.js';
 
+function gearTotal(world: World, hero: Hero, key: 'atk' | 'def' | 'dr'): number {
+  return itemsOf(world, hero).reduce((n, i) => n + i[key], 0);
+}
+
 export function heroAtk(world: World, hero: Hero): number {
-  const gear = itemsOf(world, hero).reduce((n, i) => n + i.atk, 0);
   const reckless = hasTrait(hero, 'reckless') ? 2 : 0;
-  return 6 + Math.floor(hero.level * 0.6) + statMod(hero.stats[hero.primary]) + gear + reckless;
+  return 6 + Math.floor(hero.level * 0.6) + statMod(hero.stats[hero.primary]) + gearTotal(world, hero, 'atk') + reckless;
 }
 
 export function heroDef(world: World, hero: Hero): number {
-  const gear = itemsOf(world, hero).reduce((n, i) => n + i.def, 0);
   const reckless = hasTrait(hero, 'reckless') ? 2 : 0;
-  return 6 + Math.floor(hero.level * 0.4) + statMod(hero.stats.agi) + gear - reckless;
+  return 6 + Math.floor(hero.level * 0.4) + statMod(hero.stats.agi) + gearTotal(world, hero, 'def') - reckless;
 }
 
 export function heroDr(world: World, hero: Hero): number {
-  return Math.min(6, itemsOf(world, hero).reduce((n, i) => n + i.dr, 0));
+  return Math.min(6, gearTotal(world, hero, 'dr'));
 }
 
 function hitDc(attackerAtk: number, defenderDef: number): number {
@@ -115,28 +117,36 @@ function killMonster(world: World, team: Team, hero: Hero, target: Monster, dama
   setRecord(world, 'kills', 'most kills by one hero', hero.kills, hero.name, team);
 }
 
+function rescueChance(helper: Hero, base: number, pretreBonus = 0): number {
+  return clamp(
+    0.1,
+    0.9,
+    base +
+      0.05 * statMod(helper.stats.wil) +
+      (helper.className === 'pretre' ? pretreBonus : 0) +
+      0.02 * helper.level +
+      (hasTrait(helper, 'loyal') ? 0.12 : 0) +
+      (hasTrait(helper, 'pious') ? 0.08 : 0),
+  );
+}
+
+function reviveHero(world: World, team: Team, saviour: Hero, patient: Hero): void {
+  patient.state = 'ok';
+  patient.hp = 1;
+  patient.scarred = true;
+  world.scheduler.cancel('BLEED_OUT', patient.id);
+  team.morale = clamp(0, 100, team.morale + 4);
+  linkPair(world, saviour, patient, 25);
+}
+
 function pretreAid(world: World, team: Team, hero: Hero): boolean {
   const rng = rngFor(world.seed, world.tick, RngDomain.ACT_AID, hero.id);
 
   const downed = roster(world, team).filter((h) => h.state === 'downed');
   const patient = downed[0];
   if (patient) {
-    const p = clamp(
-      0.1,
-      0.9,
-      0.6 +
-        0.05 * statMod(hero.stats.wil) +
-        0.02 * hero.level +
-        (hasTrait(hero, 'loyal') ? 0.12 : 0) +
-        (hasTrait(hero, 'pious') ? 0.08 : 0),
-    );
-    if (rng.chance(p)) {
-      patient.state = 'ok';
-      patient.hp = 1;
-      patient.scarred = true;
-      world.scheduler.cancel('BLEED_OUT', patient.id);
-      team.morale = clamp(0, 100, team.morale + 4);
-      linkPair(world, hero, patient, 25);
+    if (rng.chance(rescueChance(hero, 0.6))) {
+      reviveHero(world, team, hero, patient);
       emit(world, {
         type: 'HERO_AID',
         teamId: team.id,
@@ -277,16 +287,7 @@ export function resolveCombatRound(world: World, team: Team): void {
           if (m.guardian && hasTrait(hero, 'glory_hound')) w *= 2;
           return w;
         });
-        const targetWeight = weights.reduce((a, b) => a + b, 0);
-        let targetPoint = targetRng.float() * targetWeight;
-        let target = targets[0];
-        for (let i = 0; i < targets.length; i++) {
-          targetPoint -= weights[i] ?? 0;
-          if (targetPoint <= 0) {
-            target = targets[i];
-            break;
-          }
-        }
+        const target = pickWeighted(targets, weights, targetRng);
         if (!target) break;
 
         const d20 = hitRng.int(1, 20);
@@ -353,16 +354,7 @@ export function resolveCombatRound(world: World, team: Team): void {
         if (anyFrontUp && lineOf(h) === 'back') w *= 0.35;
         return w;
       });
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-      let pickPoint = targetRng.float() * totalWeight;
-      let victim = candidates[0];
-      for (let i = 0; i < candidates.length; i++) {
-        pickPoint -= weights[i] ?? 0;
-        if (pickPoint <= 0) {
-          victim = candidates[i];
-          break;
-        }
-      }
+      let victim = pickWeighted(candidates, weights, targetRng);
       if (!victim) continue;
 
       if (lineOf(victim) === 'back') {
@@ -442,23 +434,8 @@ export function attemptStabilise(world: World, team: Team): void {
     const helper = helpers.find((h) => hasTrait(h, 'loyal')) ?? helpers[0];
     if (!helper) break;
     const rng = rngFor(world.seed, world.tick, RngDomain.STABILIZE, hero.id);
-    const p = clamp(
-      0.1,
-      0.9,
-      0.45 +
-        0.05 * statMod(helper.stats.wil) +
-        (helper.className === 'pretre' ? 0.15 : 0) +
-        0.02 * helper.level +
-        (hasTrait(helper, 'loyal') ? 0.12 : 0) +
-        (hasTrait(helper, 'pious') ? 0.08 : 0),
-    );
-    if (rng.chance(p)) {
-      hero.state = 'ok';
-      hero.hp = 1;
-      hero.scarred = true;
-      world.scheduler.cancel('BLEED_OUT', hero.id);
-      team.morale = clamp(0, 100, team.morale + 4);
-      linkPair(world, helper, hero, 25);
+    if (rng.chance(rescueChance(helper, 0.45, 0.15))) {
+      reviveHero(world, team, helper, hero);
     }
   }
 }

@@ -11,8 +11,13 @@ import { scheduleRestock, stockFloor } from './restock.js';
 import { bankLoot, payEntryFee } from './economy.js';
 import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
-import { clamp, exploredKey, isWalkable, pushHistory, type Floor, type Team, type World } from '../types.js';
+import { clamp, exploredKey, isWalkable, pickWeighted, pushHistory, type Floor, type Team, type World } from '../types.js';
 import { markSeen } from '../fog.js';
+
+function clearPath(team: Team): void {
+  team.path = [];
+  team.pathPos = 0;
+}
 
 function rivalRooms(world: World, team: Team, floor: Floor): Set<number> {
   const taken = new Set<number>();
@@ -71,13 +76,7 @@ export function chooseDestination(world: World, team: Team, floor: Floor): numbe
 
   const floorValue = top[top.length - 1]!.value;
   const weights = top.map((c) => c.value - floorValue + 1);
-  const total = weights.reduce((a, b) => a + b, 0);
-  let point = rng.float() * total;
-  for (let i = 0; i < top.length; i++) {
-    point -= weights[i] ?? 0;
-    if (point <= 0) return top[i]!.idx;
-  }
-  return top[0]!.idx;
+  return (pickWeighted(top, weights, rng) ?? top[0]!).idx;
 }
 
 export function repath(world: World, team: Team, floor: Floor, destination: number): void {
@@ -98,8 +97,7 @@ export function repath(world: World, team: Team, floor: Floor, destination: numb
   }
   if (step !== team.roomIdx && path.length === 0) {
     team.targetRoom = team.roomIdx;
-    team.path = [];
-    team.pathPos = 0;
+    clearPath(team);
     return;
   }
   team.targetRoom = step;
@@ -173,8 +171,7 @@ export function descend(world: World, team: Team, floor: Floor): void {
   const entrySpot = roomSpot(next, next.entryRoom, team.id, world.seed);
   team.tileX = entry ? entrySpot[0] : 1;
   team.tileY = entry ? entrySpot[1] : 1;
-  team.path = [];
-  team.pathPos = 0;
+  clearPath(team);
   team.trail.length = 0;
   team.lastAction = 'EXPLORE';
   team.commitUntilTick = world.tick + 120;
@@ -215,8 +212,7 @@ export function ascend(world: World, team: Team, floor: Floor): void {
   const stairSpot = roomSpot(prev, prev.stairsRoom, team.id, world.seed);
   team.tileX = room ? stairSpot[0] : 1;
   team.tileY = room ? stairSpot[1] : 1;
-  team.path = [];
-  team.pathPos = 0;
+  clearPath(team);
   team.trail.length = 0;
   team.lastAction = 'EXPLORE';
   team.commitUntilTick = world.tick + 120;
@@ -240,8 +236,7 @@ export function advanceTeam(world: World, team: Team): void {
     if (room) {
       team.tileX = room.cx;
       team.tileY = room.cy;
-      team.path = [];
-      team.pathPos = 0;
+      clearPath(team);
       team.targetRoom = team.roomIdx;
     }
   }
@@ -249,8 +244,7 @@ export function advanceTeam(world: World, team: Team): void {
   if (!floor.rooms[team.roomIdx]) {
     team.roomIdx = floor.entryRoom;
     team.targetRoom = floor.entryRoom;
-    team.path = [];
-    team.pathPos = 0;
+    clearPath(team);
     const entry = floor.rooms[floor.entryRoom];
     team.tileX = entry?.cx ?? 1;
     team.tileY = entry?.cy ?? 1;
@@ -276,8 +270,7 @@ export function advanceTeam(world: World, team: Team): void {
     return;
   }
   if (!isWalkable(floor, next[0], next[1])) {
-    team.path = [];
-    team.pathPos = 0;
+    clearPath(team);
     team.targetRoom = team.roomIdx;
     return;
   }

@@ -1,5 +1,5 @@
 import { MAX_ROSTER } from '@donjon/shared';
-import { circulatingCoin } from './world.js';
+import { circulatingCoin, floorOf, heroById } from './world.js';
 import { MAX_HISTORY, MAX_LEVEL, MAX_RELATIONS, MAX_TRAITS, type World } from './types.js';
 import { levelForXp } from './systems/progression.js';
 import { MAX_TEAMS } from './world.js';
@@ -68,7 +68,7 @@ export function checkAll(world: World): Violation[] {
     for (const id of team.roster) {
       if (seenHeroes.has(id)) add('I3_ONE_ROSTER', `hero ${id} is in two rosters`);
       seenHeroes.add(id);
-      const hero = world.heroes.find((h) => h.id === id);
+      const hero = heroById(world, id);
       if (hero && hero.teamId !== team.id) add('I3_ROSTER_LINK', `hero ${id} teamId mismatch`);
     }
 
@@ -80,7 +80,7 @@ export function checkAll(world: World): Violation[] {
     if (team.renownMilli < 0) add('I18_RENOWN_NONNEG', `team ${team.id} renown ${team.renownMilli}`);
 
     if (team.state !== 'disbanded') {
-      const floor = world.floors.find((f) => f.id === team.floorId);
+      const floor = floorOf(world, team.floorId);
       if (!floor) {
         add('I6_TEAM_ON_FLOOR', `team ${team.id} floor ${team.floorId} missing`);
       } else {
@@ -95,7 +95,7 @@ export function checkAll(world: World): Violation[] {
     }
 
     if (team.state === 'fighting') {
-      const floor = world.floors.find((f) => f.id === team.floorId);
+      const floor = floorOf(world, team.floorId);
       const room = floor?.rooms[team.roomIdx];
       const enemies = room ? world.monsters.filter((m) => m.alive && m.roomId === room.id) : [];
       if (enemies.length === 0) add('I5_FIGHTING_HAS_ENEMY', `team ${team.id} is fighting nothing`);

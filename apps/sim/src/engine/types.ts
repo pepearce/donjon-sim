@@ -1,4 +1,4 @@
-import type { SimEvent } from '@donjon/shared';
+import type { Rng, SimEvent } from '@donjon/shared';
 import type { RingBuffer } from './ring.js';
 import type { Scheduler } from './scheduler.js';
 
@@ -271,6 +271,20 @@ export function statMod(value: number): number {
 
 export function clamp(lo: number, hi: number, value: number): number {
   return Math.min(hi, Math.max(lo, value));
+}
+
+export function pickWeighted<T>(items: T[], weights: number[], rng: Rng): T | undefined {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let point = rng.float() * total;
+  let picked = items[0];
+  for (let i = 0; i < items.length; i++) {
+    point -= weights[i] ?? 0;
+    if (point <= 0) {
+      picked = items[i];
+      break;
+    }
+  }
+  return picked;
 }
 
 export function xpToNext(level: number): number {
