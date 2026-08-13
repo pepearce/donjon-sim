@@ -1,6 +1,6 @@
 import { emit } from '../emit.js';
 import { floorOf, roster } from '../world.js';
-import { RATION_CAP, atShop, rationPriceCp } from './economy.js';
+import { ECON, atShop, rationPriceCp } from './economy.js';
 import { makeItem } from './loot.js';
 import { clamp, type Team, type World } from '../types.js';
 
@@ -13,13 +13,13 @@ export function resupply(world: World, team: Team): void {
   const room = floor?.rooms[team.roomIdx];
   const shopName = room?.name ?? 'the stall';
   const price = rationPriceCp(world, depth);
-  const bought = Math.max(0, Math.min(RATION_CAP - team.rations, Math.floor(team.goldCp / price)));
+  const bought = Math.max(0, Math.min(ECON.rationCap - team.rations, Math.floor(team.goldCp / price)));
 
   if (bought > 0) {
     const spend = bought * price;
     team.goldCp -= spend;
     world.dungeon.treasuryCp += spend;
-    team.rations = clamp(0, RATION_CAP, team.rations + bought);
+    team.rations = clamp(0, ECON.rationCap, team.rations + bought);
     team.morale = clamp(0, 100, team.morale + 2);
     emit(world, {
       type: 'SHOP_TRADE',

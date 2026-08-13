@@ -1,23 +1,25 @@
-import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { keeperLine } from '../keeperLines.js';
 import { SCHEME_NAMES } from '../tables.js';
 import { adjustKhanStanding, rungOf } from './standing.js';
 import { clamp, type KeeperScheme, type Team, type World } from '../types.js';
 
-const REVENUE_TARGET_CP = 9000;
-const LOAN_CP = 25_000;
-export const REPAY_FLOOR_CP = 8_000;
-export const AUSTERITY_LIFT_FLOOR_CP = 5_000;
+export const DUNGEON = defineTunables('dungeon', {
+  revenueTargetCp: { default: 9000, min: 0, max: 10_000_000, label: 'Daily revenue target (cp)' },
+  loanCp: { default: 25_000, min: 0, max: 10_000_000, label: 'Overseer loan size (cp)' },
+  repayFloorCp: { default: 8000, min: 0, max: 10_000_000, label: 'Loan repayment floor (cp)' },
+  austerityLiftCp: { default: 5_000, min: 0, max: 10_000_000, label: 'Austerity lift line (cp)' },
+  schemeDays: { default: 3, min: 1, max: 100, label: 'Scheme duration (days)' },
+  schemeFloorBoost: { default: 1.15, min: 1, max: 5, step: 0.01, label: 'Scheme floor boost' },
+  schemeStandingFloor: { default: -60, min: -100, max: 0, label: 'Scheme standing floor' },
+});
 
 export function austerityLiftCp(world: World): number {
   const wages = world.monsters.reduce((n, m) => n + (m.alive ? m.wageCpPerDay : 0), 0);
-  return Math.max(AUSTERITY_LIFT_FLOOR_CP, Math.round(wages * 1.5));
+  return Math.max(DUNGEON.austerityLiftCp, Math.round(wages * 1.5));
 }
 const SCHEME_KINDS = ['bankrupt', 'blood_quota', 'stop_descent', 'toll_harvest'];
-const SCHEME_DAYS = 3;
-const SCHEME_FLOOR_BOOST = 1.15;
-const SCHEME_STANDING_FLOOR = -60;
 
 export function updateFameAndNotoriety(world: World): void {
   const d = world.dungeon;
@@ -35,7 +37,7 @@ export function updateAggression(world: World, delvesWithDeath: number, delvesCo
 
   const lethality = d.lethalityEmaMilli / 1000;
   const delta =
-    0.015 * ((REVENUE_TARGET_CP - d.revenueEmaCp) / REVENUE_TARGET_CP) - 0.02 * (lethality - 0.22);
+    0.015 * ((DUNGEON.revenueTargetCp - d.revenueEmaCp) / DUNGEON.revenueTargetCp) - 0.02 * (lethality - 0.22);
 
   d.aggressionMilli = Math.round(clamp(550, 1750, d.aggressionMilli + delta * 1000));
   d.corpseYieldCp = 0;
@@ -53,14 +55,14 @@ export function resolveLoan(world: World): void {
   const d = world.dungeon;
 
   if (d.treasuryCp < 5_000 && d.loanCp === 0) {
-    d.loanCp = LOAN_CP;
-    d.treasuryCp += LOAN_CP;
-    d.mintedCp += LOAN_CP;
+    d.loanCp = DUNGEON.loanCp;
+    d.treasuryCp += DUNGEON.loanCp;
+    d.mintedCp += DUNGEON.loanCp;
     d.loanTakenTick = world.tick;
     adjustKhanStanding(world, -5);
     emit(world, {
       type: 'KHAN_LOAN',
-      payload: { cp: LOAN_CP, action: 'taken', text: keeperLine(world, 'loan_taken') },
+      payload: { cp: DUNGEON.loanCp, action: 'taken', text: keeperLine(world, 'loan_taken') },
     });
     return;
   }
@@ -83,8 +85,8 @@ export function resolveLoan(world: World): void {
     });
   }
 
-  if (d.treasuryCp > REPAY_FLOOR_CP && d.loanCp > 0) {
-    const pay = Math.min(d.loanCp, Math.floor((d.treasuryCp - REPAY_FLOOR_CP) * 0.25));
+  if (d.treasuryCp > DUNGEON.repayFloorCp && d.loanCp > 0) {
+    const pay = Math.min(d.loanCp, Math.floor((d.treasuryCp - DUNGEON.repayFloorCp) * 0.25));
     if (pay <= 0) return;
     d.treasuryCp -= pay;
     d.sinkCp += pay;
@@ -113,7 +115,7 @@ export function schemeTarget(world: World): Team | undefined {
 export function schemeAggressionFactor(world: World, floorId: number): number {
   const target = schemeTarget(world);
   if (!target || target.state === 'disbanded' || target.floorId !== floorId) return 1;
-  return SCHEME_FLOOR_BOOST;
+  return DUNGEON.schemeFloorBoost;
 }
 
 export function maybeStartScheme(world: World): void {
@@ -158,7 +160,7 @@ export function maybeStartScheme(world: World): void {
     goal,
     progress,
     startedTick: world.tick,
-    deadlineTick: world.tick + SCHEME_DAYS * DAY_TICKS,
+    deadlineTick: world.tick + DUNGEON.schemeDays * DAY_TICKS,
     outcome: '',
   };
   d.scheme = scheme;
@@ -167,7 +169,7 @@ export function maybeStartScheme(world: World): void {
   emit(world, {
     type: 'KEEPER_SCHEME_SET',
     teamId: target.id,
-    payload: { name, kind, team: target.name, goal, days: SCHEME_DAYS },
+    payload: { name, kind, team: target.name, goal, days: DUNGEON.schemeDays },
   });
 }
 
@@ -189,7 +191,7 @@ export function tickScheme(world: World): void {
 
   const target = schemeTarget(world);
   const gone = !target || target.state === 'disbanded';
-  if (target && !gone && target.standing > SCHEME_STANDING_FLOOR) adjustStanding(target, -1);
+  if (target && !gone && target.standing > DUNGEON.schemeStandingFloor) adjustStanding(target, -1);
 
   let met = false;
   if (scheme.kind === 'bankrupt') {

@@ -2,7 +2,7 @@ import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { ITEMS } from '../tables.js';
 import { livingRoster } from '../world.js';
-import { COIN_SETPOINT, RATION_CAP } from './economy.js';
+import { ECON } from './economy.js';
 import { LEAN_TREASURY_CP } from './restock.js';
 import { hasTrait } from './traits.js';
 import { RARITY_BASE_CP, RARITY_NAMES, type Hero, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
@@ -24,7 +24,7 @@ export function rarityWeights(depth: number): number[] {
 }
 
 export function restockCostFactor(circulating: number): number {
-  return Math.min(2.0, Math.max(0.35, (circulating / COIN_SETPOINT) ** 0.8));
+  return Math.min(2.0, Math.max(0.35, (circulating / ECON.coinSetpoint) ** 0.8));
 }
 
 export function rollRarity(depth: number, u: number): Rarity {
@@ -70,7 +70,7 @@ export function dropLoot(world: World, team: Team, room: Room): void {
   const coin = Math.round((30 + 45 * depth) * (0.5 + rng.float()) * (lean ? 0.6 : 1));
   const item = rng.chance(0.45) ? makeItem(world, depth, null) : null;
   const supplies = rng.chance(0.3) ? rng.int(3, 9) : 0;
-  if (supplies > 0) team.rations = Math.min(RATION_CAP, team.rations + supplies);
+  if (supplies > 0) team.rations = Math.min(ECON.rationCap, team.rations + supplies);
 
   const factor = restockCostFactor(
     world.dungeon.treasuryCp +

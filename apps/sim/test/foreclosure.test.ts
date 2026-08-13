@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
-import { FORECLOSE_DAYS, dailyUpkeep } from '../src/engine/systems/economy.js';
+import { ECON, dailyUpkeep } from '../src/engine/systems/economy.js';
 import { newWorld } from '../src/engine/setup.js';
 import { step } from '../src/engine/step.js';
 
@@ -47,7 +47,7 @@ describe('foreclosure', () => {
     world.dungeon.austerity = true;
     world.dungeon.standing = 0;
 
-    for (let day = 1; day <= FORECLOSE_DAYS; day++) {
+    for (let day = 1; day <= ECON.forecloseDays; day++) {
       world.tick = day * DAY_TICKS;
       world.dungeon.treasuryCp = 0;
       dailyUpkeep(world);

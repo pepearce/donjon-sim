@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
 import { newWorld } from '../src/engine/setup.js';
-import { FORECLOSE_DAYS, dailyUpkeep } from '../src/engine/systems/economy.js';
+import { ECON, dailyUpkeep } from '../src/engine/systems/economy.js';
 import { austerityLiftCp, resolveLoan } from '../src/engine/systems/dungeon.js';
 import { hiringBudgetCp } from '../src/engine/systems/restock.js';
 import { adjustKhanStanding, rungOf, updateStandingDaily } from '../src/engine/systems/standing.js';
@@ -149,7 +149,7 @@ describe('foreclosure gate', () => {
     const w = newWorld(SEED);
     w.dungeon.loanCp = 25_000;
     w.dungeon.standing = 50;
-    insolvent(w, FORECLOSE_DAYS + 3);
+    insolvent(w, ECON.forecloseDays + 3);
     expect(w.foreclosed).toBe(false);
   });
 
@@ -158,7 +158,7 @@ describe('foreclosure gate', () => {
     w.dungeon.loanCp = 25_000;
     w.dungeon.standing = 0;
     w.dungeon.austerity = true;
-    insolvent(w, FORECLOSE_DAYS);
+    insolvent(w, ECON.forecloseDays);
     expect(w.foreclosed).toBe(true);
     expect(w.pendingEvents.some((e) => e.type === 'KHAN_FORECLOSURE')).toBe(true);
   });
@@ -167,7 +167,7 @@ describe('foreclosure gate', () => {
     const w = newWorld(SEED);
     w.dungeon.loanCp = 25_000;
     w.dungeon.standing = 0;
-    insolvent(w, FORECLOSE_DAYS - 1);
+    insolvent(w, ECON.forecloseDays - 1);
     expect(w.foreclosed).toBe(false);
     expect(
       w.pendingEvents.some(

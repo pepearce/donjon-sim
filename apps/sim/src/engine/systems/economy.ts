@@ -1,4 +1,4 @@
-import { DAY_TICKS, RngDomain, applyBp, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, applyBp, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { keeperLine } from '../keeperLines.js';
 import { circulatingCoin, floorOf, monstersIn, roster } from '../world.js';
@@ -9,17 +9,25 @@ import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
 import { clamp, pushHistory, type Team, type World } from '../types.js';
 
-const RICH_CP = 5000;
-const BIG_HAUL_CP = 2000;
-
-export const COIN_SETPOINT = 150_000;
+export const ECON = defineTunables('economy', {
+  richCp: { default: 5000, min: 0, max: 1_000_000, label: 'Rich epithet threshold (cp)' },
+  bigHaulCp: { default: 2000, min: 0, max: 1_000_000, label: 'Big haul threshold (cp)' },
+  coinSetpoint: { default: 150_000, min: 1000, max: 10_000_000, label: 'Coin supply setpoint (cp)' },
+  forecloseDays: { default: 5, min: 1, max: 365, label: 'Insolvency grace (days)' },
+  quitChance: { default: 0.3, min: 0, max: 1, step: 0.01, label: 'Hero quit chance' },
+  guardianQuitChance: { default: 0.1, min: 0, max: 1, step: 0.01, label: 'Guardian quit chance' },
+  insolventTreasuryCp: { default: 5000, min: 0, max: 10_000_000, label: 'Insolvency line (cp)' },
+  rationBurnEvery: { default: 10, min: 1, max: 1000, label: 'Ration burn cadence' },
+  campBurnEvery: { default: 5, min: 1, max: 1000, label: 'Camp ration burn cadence' },
+  rationCap: { default: 60, min: 1, max: 10_000, label: 'Ration cap' },
+});
 
 export function priceIndex(circulating: number): number {
-  return clamp(0.6, 2.5, Math.sqrt(circulating / COIN_SETPOINT));
+  return clamp(0.6, 2.5, Math.sqrt(circulating / ECON.coinSetpoint));
 }
 
 export function khanTaxBp(circulating: number): number {
-  return Math.round(clamp(200, 3500, 1000 + (circulating - COIN_SETPOINT) * 4e-5));
+  return Math.round(clamp(200, 3500, 1000 + (circulating - ECON.coinSetpoint) * 4e-5));
 }
 
 export function payEntryFee(world: World, team: Team): void {
@@ -77,10 +85,10 @@ export function bankLoot(world: World, team: Team): void {
   creditTollScheme(world, toll);
 
   for (const hero of [...crew].sort((a, b) => a.id - b.id)) {
-    if (hero.goldCp >= RICH_CP) awardEpithet(world, hero, 'rich');
+    if (hero.goldCp >= ECON.richCp) awardEpithet(world, hero, 'rich');
   }
 
-  if (carried >= BIG_HAUL_CP) {
+  if (carried >= ECON.bigHaulCp) {
     world.dungeon.lastBigHaulTeamId = team.id;
     pushHistory(team, world.tick, 'haul', `${team.name} hauled ${carried}cp up the stairs in one trip.`);
   }
@@ -88,17 +96,12 @@ export function bankLoot(world: World, team: Team): void {
   setRecord(world, 'toll', 'largest single toll', toll, team.name, team);
 }
 
-export const FORECLOSE_DAYS = 5;
-const QUIT_CHANCE = 0.3;
-const GUARDIAN_QUIT_CHANCE = 0.1;
-const INSOLVENT_TREASURY_CP = 5_000;
-
 function staffQuits(world: World): void {
   let gone = 0;
   for (const monster of world.monsters) {
     if (!monster.alive) continue;
     const rng = rngFor(world.seed, world.tick, RngDomain.STAFF_QUIT, monster.id);
-    if (!rng.chance(monster.guardian ? GUARDIAN_QUIT_CHANCE : QUIT_CHANCE)) continue;
+    if (!rng.chance(monster.guardian ? ECON.guardianQuitChance : ECON.quitChance)) continue;
     monster.alive = false;
     monster.hp = 0;
     gone += 1;
@@ -119,19 +122,19 @@ function staffQuits(world: World): void {
 
 function trackInsolvency(world: World): void {
   const d = world.dungeon;
-  if (d.treasuryCp < INSOLVENT_TREASURY_CP && d.loanCp > 0) d.insolventDays += 1;
+  if (d.treasuryCp < ECON.insolventTreasuryCp && d.loanCp > 0) d.insolventDays += 1;
   else d.insolventDays = 0;
 
   if (rungOf(d.standing) !== 'overseer') return;
 
-  if (d.insolventDays === FORECLOSE_DAYS - 1) {
+  if (d.insolventDays === ECON.forecloseDays - 1) {
     emit(world, {
       type: 'KEEPER_DECREE',
       payload: { decree: 'foreclosure_imminent', text: keeperLine(world, 'foreclosure_imminent') },
     });
   }
 
-  if (d.insolventDays >= FORECLOSE_DAYS && !world.foreclosed) {
+  if (d.insolventDays >= ECON.forecloseDays && !world.foreclosed) {
     world.foreclosed = true;
     emit(world, {
       type: 'KHAN_FORECLOSURE',
@@ -173,9 +176,6 @@ export function dailyUpkeep(world: World): void {
     team.rations = clamp(0, 60, team.rations + (spend >= upkeep ? 12 : -6));
   }
 }
-
-export const RATION_BURN_EVERY = 10;
-export const CAMP_BURN_EVERY = 5;
 
 export function atHearth(world: World, team: Team): boolean {
   const floor = floorOf(world, team.floorId);
@@ -219,21 +219,19 @@ export function restAndHeal(world: World, team: Team): void {
       if (missing <= 0) continue;
       hero.hp += Math.min(missing, Math.max(1, Math.round(hero.hpMax * rate)));
     }
-    if (world.tick % CAMP_BURN_EVERY === 0) {
+    if (world.tick % ECON.campBurnEvery === 0) {
       if (!hearth) team.rations = Math.max(0, team.rations - 1);
       team.morale = clamp(0, 100, team.morale + 1);
     }
   }
 
-  if (!hearth && world.tick % RATION_BURN_EVERY === 0) team.rations = Math.max(0, team.rations - 1);
+  if (!hearth && world.tick % ECON.rationBurnEvery === 0) team.rations = Math.max(0, team.rations - 1);
   team.morale = clamp(0, 100, team.morale + (hearth ? 3 : 2));
 
   if (cost > 0 && world.tick % 20 === 0) {
     emit(world, { type: 'REST', teamId: team.id, floorId: team.floorId, payload: { cp: cost, team: team.name } });
   }
 }
-
-export const RATION_CAP = 60;
 
 export function atShop(world: World, team: Team): boolean {
   const floor = floorOf(world, team.floorId);
