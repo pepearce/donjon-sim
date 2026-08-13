@@ -10,6 +10,10 @@ export interface AdminDeps {
   onCheckpoint(): Record<string, unknown>;
   onDiag(): Record<string, unknown>;
   log(message: string): void;
+  onConfigList(): unknown;
+  onConfigSet(key: string, value: number): unknown;
+  onConfigReset(key: string): unknown;
+  onConfigResetAll(): number;
 }
 
 function unauthorised(res: ServerResponse): void {
@@ -31,8 +35,22 @@ function isLoopback(req: IncomingMessage): boolean {
   return local && req.headers['x-forwarded-for'] === undefined;
 }
 
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+function fail(res: ServerResponse, status: number, code: string, message: string): void {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: { code, message } }));
+}
+
 export function createAdminServer(deps: AdminDeps): Server {
-  const handler = (req: IncomingMessage, res: ServerResponse): void => {
+  const handler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!isLoopback(req) || !tokenMatches(deps.token, req.headers['x-donjon-admin-token'] as string | undefined)) {
       unauthorised(res);
       return;
@@ -46,6 +64,49 @@ export function createAdminServer(deps: AdminDeps): Server {
     };
 
     deps.log(`admin ${req.method} ${path}${url.search}`);
+
+    if (path === '/admin/config' && req.method === 'GET') {
+      json({ ok: true, tunables: deps.onConfigList() });
+      return;
+    }
+
+    if (path === '/admin/config/reset-all' && req.method === 'POST') {
+      json({ ok: true, cleared: deps.onConfigResetAll() });
+      return;
+    }
+
+    if (path.startsWith('/admin/config/')) {
+      const key = decodeURIComponent(path.slice('/admin/config/'.length));
+      if (req.method === 'PUT') {
+        let value: unknown;
+        try {
+          value = (JSON.parse(await readBody(req)) as { value?: unknown }).value;
+        } catch {
+          fail(res, 400, 'bad_json', 'body must be JSON like {"value": 123}');
+          return;
+        }
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          fail(res, 400, 'bad_value', 'value must be a finite number');
+          return;
+        }
+        try {
+          json({ ok: true, tunable: deps.onConfigSet(key, value) });
+        } catch {
+          fail(res, 404, 'unknown_key', key);
+        }
+        return;
+      }
+      if (req.method === 'DELETE') {
+        try {
+          json({ ok: true, tunable: deps.onConfigReset(key) });
+        } catch {
+          fail(res, 404, 'unknown_key', key);
+        }
+        return;
+      }
+      fail(res, 405, 'bad_method', `${req.method ?? ''} not allowed`);
+      return;
+    }
 
     switch (path) {
       case '/admin/pause':
@@ -85,5 +146,9 @@ export function createAdminServer(deps: AdminDeps): Server {
     }
   };
 
-  return createServer(handler);
+  return createServer((req, res) => {
+    void handler(req, res).catch(() => {
+      fail(res, 500, 'internal', 'admin handler failed');
+    });
+  });
 }
