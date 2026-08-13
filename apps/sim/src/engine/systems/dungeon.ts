@@ -9,7 +9,7 @@ export const DUNGEON = defineTunables('dungeon', {
   revenueTargetCp: { default: 9000, min: 0, max: 10_000_000, label: 'Daily revenue target (cp)' },
   loanCp: { default: 25_000, min: 0, max: 10_000_000, label: 'Overseer loan size (cp)' },
   repayFloorCp: { default: 8000, min: 0, max: 10_000_000, label: 'Loan repayment floor (cp)' },
-  austerityLiftCp: { default: 5_000, min: 0, max: 10_000_000, label: 'Austerity lift line (cp)' },
+  austerityLiftFloorCp: { default: 5_000, min: 0, max: 10_000_000, label: 'Austerity lift floor (cp)' },
   schemeDays: { default: 3, min: 1, max: 100, label: 'Scheme duration (days)' },
   schemeFloorBoost: { default: 1.15, min: 1, max: 5, step: 0.01, label: 'Scheme floor boost' },
   schemeStandingFloor: { default: -60, min: -100, max: 0, label: 'Scheme standing floor' },
@@ -17,7 +17,7 @@ export const DUNGEON = defineTunables('dungeon', {
 
 export function austerityLiftCp(world: World): number {
   const wages = world.monsters.reduce((n, m) => n + (m.alive ? m.wageCpPerDay : 0), 0);
-  return Math.max(DUNGEON.austerityLiftCp, Math.round(wages * 1.5));
+  return Math.max(DUNGEON.austerityLiftFloorCp, Math.round(wages * 1.5));
 }
 const SCHEME_KINDS = ['bankrupt', 'blood_quota', 'stop_descent', 'toll_harvest'];
 
