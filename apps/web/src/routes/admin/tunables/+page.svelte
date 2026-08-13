@@ -59,6 +59,10 @@
   async function save(t: Tunable): Promise<void> {
     const raw = drafts[t.key];
     if (raw === undefined || raw === String(t.value)) return;
+    if (raw.trim() === '') {
+      drafts[t.key] = String(t.value);
+      return;
+    }
     const value = Number(raw);
     if (!Number.isFinite(value)) {
       drafts[t.key] = String(t.value);
@@ -86,8 +90,12 @@
       body: JSON.stringify({ action: 'reset', key: t.key }),
     });
     const body = await res.json();
-    if (res.ok) patch(body.tunable);
-    else error = body?.error?.message ?? 'reset failed';
+    if (res.ok) {
+      error = '';
+      patch(body.tunable);
+    } else {
+      error = body?.error?.message ?? 'reset failed';
+    }
   }
 
   async function resetAll(): Promise<void> {
