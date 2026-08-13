@@ -64,6 +64,11 @@ describe('GET /admin/config', () => {
     expect(body.ok).toBe(true);
     expect(body.tunables.some((t) => t.key === 'test-admin.gamma')).toBe(true);
   });
+
+  it('405s on a wrong method', async () => {
+    const res = await call('/admin/config', { method: 'POST' });
+    expect(res.status).toBe(405);
+  });
 });
 
 describe('PUT /admin/config/:key', () => {

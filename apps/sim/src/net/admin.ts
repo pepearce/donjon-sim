@@ -65,7 +65,11 @@ export function createAdminServer(deps: AdminDeps): Server {
 
     deps.log(`admin ${req.method} ${path}${url.search}`);
 
-    if (path === '/admin/config' && req.method === 'GET') {
+    if (path === '/admin/config') {
+      if (req.method !== 'GET') {
+        fail(res, 405, 'bad_method', `${req.method ?? ''} not allowed`);
+        return;
+      }
       json({ ok: true, tunables: deps.onConfigList() });
       return;
     }
