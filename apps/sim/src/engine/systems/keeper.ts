@@ -1,4 +1,4 @@
-import { DAY_TICKS, RngDomain, rngFor, type Rng } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, defineTunables, rngFor, type Rng } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { GUARDIAN_NAMES, KEEPER_ACTIONS, MONSTERS, type KeeperActionDef } from '../tables.js';
 import { floorOf } from '../world.js';
@@ -7,10 +7,12 @@ import { maybeStartScheme, schemeTarget } from './dungeon.js';
 import { rungOf } from './standing.js';
 import type { Floor, World } from '../types.js';
 
-const HIRE_DAYS = 30;
-const HIRE_CR_BOOST = 1.4;
-const AUSTERITY_TREASURY_CP = 30_000;
-const CENSURED_HIRE_MULT = 1.5;
+export const KEEPER = defineTunables('keeper', {
+  hireDays: { default: 30, min: 1, max: 365, label: 'Hire contract (days)' },
+  hireCrBoost: { default: 1.4, min: 1, max: 10, step: 0.01, label: 'Hire CR boost' },
+  austerityTreasuryCp: { default: 10_000, min: 0, max: 10_000_000, label: 'Austerity trigger (cp)' },
+  censuredHireMult: { default: 1.5, min: 1, max: 10, step: 0.01, label: 'Censured hire cost multiplier' },
+});
 
 const TRAIT_ACTION_BOOST: Record<string, string[]> = {
   miserly: ['toll_up', 'corpse_tax_up', 'austerity'],
@@ -46,15 +48,15 @@ function hireFloor(world: World): Floor | undefined {
 }
 
 function hireCr(floor: Floor): number {
-  return Math.max(1, floor.dangerCr * HIRE_CR_BOOST);
+  return Math.max(1, floor.dangerCr * KEEPER.hireCrBoost);
 }
 
 export function keeperCost(world: World, action: KeeperActionDef): number {
   if (action.id !== 'hire_guardian') return action.costCp;
   const floor = hireFloor(world);
   if (!floor) return Number.MAX_SAFE_INTEGER;
-  const base = HIRE_DAYS * wageForCr(hireCr(floor));
-  return rungOf(world.dungeon.standing) === 'censured' ? Math.round(base * CENSURED_HIRE_MULT) : base;
+  const base = KEEPER.hireDays * wageForCr(hireCr(floor));
+  return rungOf(world.dungeon.standing) === 'censured' ? Math.round(base * KEEPER.censuredHireMult) : base;
 }
 
 function available(world: World, action: KeeperActionDef): boolean {
@@ -64,7 +66,7 @@ function available(world: World, action: KeeperActionDef): boolean {
   if (action.entryFeeCp !== undefined && d.entryFeeCp === action.entryFeeCp) return false;
   if (action.corpseTaxBp !== undefined && d.corpseTaxBp === action.corpseTaxBp) return false;
 
-  if (action.id === 'austerity') return !d.austerity && d.treasuryCp < AUSTERITY_TREASURY_CP;
+  if (action.id === 'austerity') return !d.austerity && d.treasuryCp < KEEPER.austerityTreasuryCp;
   if (action.id === 'open_scheme') {
     return d.scheme === null && world.teams.some((t) => t.state !== 'disbanded');
   }

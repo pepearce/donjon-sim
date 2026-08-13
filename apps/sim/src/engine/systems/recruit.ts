@@ -1,12 +1,14 @@
-import { RngDomain, rngFor } from '@donjon/shared';
+import { RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { MAX_TEAMS, heroById, makeHero, makeTeam, roster } from '../world.js';
 import { clamp, relationTo, type Hero, type World } from '../types.js';
 
-const SOFT_FLOOR_HEROES = 20;
-const TARGET_HEROES = 40;
-const TARGET_TEAMS = 7;
-const MAX_POOL = 20;
+export const RECRUIT = defineTunables('recruit', {
+  softFloorHeroes: { default: 20, min: 0, max: 1000, label: 'Hero soft floor' },
+  targetHeroes: { default: 40, min: 0, max: 1000, label: 'Hero target' },
+  targetTeams: { default: 7, min: 1, max: 100, label: 'Team target' },
+  maxPool: { default: 20, min: 1, max: 1000, label: 'Recruit pool cap' },
+});
 
 export function livingHeroCount(world: World): number {
   return world.heroes.filter((h) => h.state !== 'dead').length;
@@ -19,16 +21,16 @@ export function activeTeamCount(world: World): number {
 export function arrivals(world: World): void {
   const living = livingHeroCount(world);
   const pool = world.tavern.length;
-  if (pool >= MAX_POOL) return;
+  if (pool >= RECRUIT.maxPool) return;
 
   const d = world.dungeon;
   const fameNorm = d.fameMilli / (d.fameMilli + 4_000_000);
   const notorietyNorm = d.notorietyMilli / (d.notorietyMilli + 6_000_000);
 
-  const desperate = living < SOFT_FLOOR_HEROES;
+  const desperate = living < RECRUIT.softFloorHeroes;
   const p = desperate
     ? 0.25
-    : clamp(0, 0.25, 0.002 * (TARGET_HEROES - living) + 0.03 * fameNorm - 0.015 * notorietyNorm);
+    : clamp(0, 0.25, 0.002 * (RECRUIT.targetHeroes - living) + 0.03 * fameNorm - 0.015 * notorietyNorm);
 
   if (p <= 0) return;
   const rng = rngFor(world.seed, world.tick, RngDomain.RECRUIT, world.nextHeroId);
@@ -54,7 +56,7 @@ export function formTeams(world: World): void {
   const active = activeTeamCount(world);
   if (active >= MAX_TEAMS || world.tavern.length < 4) return;
 
-  const p = clamp(0, 0.05, 0.006 * (TARGET_TEAMS - active));
+  const p = clamp(0, 0.05, 0.006 * (RECRUIT.targetTeams - active));
   if (p <= 0) return;
 
   const rng = rngFor(world.seed, world.tick, RngDomain.TEAM_GEN, world.nextTeamId);
@@ -143,7 +145,7 @@ export function retireStragglers(world: World): void {
       if (hero.state === 'dead') continue;
       hero.teamId = null;
       if (world.tavern.includes(hero.id)) continue;
-      if (world.tavern.length < MAX_POOL) {
+      if (world.tavern.length < RECRUIT.maxPool) {
         world.tavern.push(hero.id);
         continue;
       }

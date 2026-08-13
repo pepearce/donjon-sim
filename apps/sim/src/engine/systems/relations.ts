@@ -1,9 +1,12 @@
+import { defineTunables } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { livingRoster } from '../world.js';
 import { addRelation, clamp, relationTo, type Hero, type Team, type World } from '../types.js';
 
-export const BOND_THRESHOLD = 40;
-export const GRUDGE_THRESHOLD = -40;
+export const RELATIONS = defineTunables('relations', {
+  bondThreshold: { default: 40, min: 0, max: 100, label: 'Bond threshold' },
+  grudgeThreshold: { default: -40, min: -100, max: 0, label: 'Grudge threshold' },
+});
 
 export function linkPair(world: World, a: Hero, b: Hero, delta: number): void {
   if (a.id === b.id || delta === 0) return;
@@ -14,7 +17,9 @@ export function linkPair(world: World, a: Hero, b: Hero, delta: number): void {
   const afterB = addRelation(b, a.id, delta);
 
   if (delta > 0) {
-    const crossed = (beforeA < BOND_THRESHOLD && afterA >= BOND_THRESHOLD) || (beforeB < BOND_THRESHOLD && afterB >= BOND_THRESHOLD);
+    const crossed =
+      (beforeA < RELATIONS.bondThreshold && afterA >= RELATIONS.bondThreshold) ||
+      (beforeB < RELATIONS.bondThreshold && afterB >= RELATIONS.bondThreshold);
     if (!crossed) return;
     emit(world, {
       type: 'HERO_BOND_FORMED',
@@ -25,7 +30,9 @@ export function linkPair(world: World, a: Hero, b: Hero, delta: number): void {
     return;
   }
 
-  const crossed = (beforeA > GRUDGE_THRESHOLD && afterA <= GRUDGE_THRESHOLD) || (beforeB > GRUDGE_THRESHOLD && afterB <= GRUDGE_THRESHOLD);
+  const crossed =
+    (beforeA > RELATIONS.grudgeThreshold && afterA <= RELATIONS.grudgeThreshold) ||
+    (beforeB > RELATIONS.grudgeThreshold && afterB <= RELATIONS.grudgeThreshold);
   if (!crossed) return;
   emit(world, {
     type: 'HERO_GRUDGE_FORMED',

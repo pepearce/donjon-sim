@@ -1,4 +1,4 @@
-import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { GUARDIAN_NAMES, MONSTERS } from '../tables.js';
 import { floorOf } from '../world.js';
@@ -7,9 +7,11 @@ import { schemeAggressionFactor } from './dungeon.js';
 import { armTrap } from './traps.js';
 import type { Floor, Room, World } from '../types.js';
 
-export const LEAN_TREASURY_CP = 20_000;
-const AUSTERITY_PAYROLL_CP = 5_000;
-const SHOPFRONT_DEPTH = 2;
+export const RESTOCK = defineTunables('restock', {
+  leanTreasuryCp: { default: 20_000, min: 0, max: 10_000_000, label: 'Lean restock line (cp)' },
+  austerityPayrollCp: { default: 5000, min: 0, max: 10_000_000, label: 'Austerity payroll cap (cp)' },
+  shopfrontDepth: { default: 2, min: 1, max: 10, label: 'Shopfront depth' },
+});
 
 export function payrollCp(world: World): number {
   let wages = 0;
@@ -20,8 +22,8 @@ export function payrollCp(world: World): number {
 }
 
 export function hiringBudgetCp(world: World): number {
-  if (world.dungeon.austerity) return AUSTERITY_PAYROLL_CP;
-  return Math.max(AUSTERITY_PAYROLL_CP, world.dungeon.treasuryCp * 0.2);
+  if (world.dungeon.austerity) return RESTOCK.austerityPayrollCp;
+  return Math.max(RESTOCK.austerityPayrollCp, world.dungeon.treasuryCp * 0.2);
 }
 
 export function stockRoom(world: World, floor: Floor, room: Room): void {
@@ -30,7 +32,7 @@ export function stockRoom(world: World, floor: Floor, room: Room): void {
   const pool = MONSTERS.filter((m) => m.minDepth <= floor.depth);
   if (pool.length === 0) return;
 
-  const lean = world.dungeon.austerity || world.dungeon.treasuryCp < LEAN_TREASURY_CP;
+  const lean = world.dungeon.austerity || world.dungeon.treasuryCp < RESTOCK.leanTreasuryCp;
   const isGuardianRoom = room.idx === floor.stairsRoom;
   const count = isGuardianRoom || lean ? 1 : Math.max(1, Math.round((1 + rng.int(0, 1)) * aggression));
   const cheap = [...pool].sort((a, b) => a.crBias - b.crBias || (a.name < b.name ? -1 : 1)).slice(0, 3);
@@ -70,7 +72,7 @@ export function stockRoom(world: World, floor: Floor, room: Room): void {
 
 export function scheduleRestock(world: World, floor: Floor, room: Room): void {
   const rng = rngFor(world.seed, world.tick, RngDomain.RESTOCK, room.id);
-  const lean = world.dungeon.treasuryCp < LEAN_TREASURY_CP ? 2 : 1;
+  const lean = world.dungeon.treasuryCp < RESTOCK.leanTreasuryCp ? 2 : 1;
   const lo = DAY_TICKS * (0.15 + 0.05 * (floor.depth - 1)) * lean;
   const hi = DAY_TICKS * (0.5 + 0.1 * (floor.depth - 1)) * lean;
   const delay = rng.int(Math.round(lo), Math.round(hi));
@@ -94,7 +96,7 @@ export function resolveRestock(world: World, roomId: number): void {
   for (const floor of world.floors) {
     const room = floor.rooms.find((r) => r.id === roomId);
     if (!room) continue;
-    if (floor.depth > SHOPFRONT_DEPTH && payrollCp(world) > hiringBudgetCp(world)) {
+    if (floor.depth > RESTOCK.shopfrontDepth && payrollCp(world) > hiringBudgetCp(world)) {
       scheduleRestock(world, floor, room);
       return;
     }

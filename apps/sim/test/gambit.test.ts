@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
 import { newWorld } from '../src/engine/setup.js';
 import {
-  GAMBIT_COOLDOWN_DAYS,
-  GAMBIT_DAYS,
+  GAMBIT,
   creditTollGambit,
   maybeDeclareGambit,
   tickGambit,
@@ -43,7 +42,7 @@ describe('gambit declaration', () => {
     expect(world.dungeon.treasuryCp).toBe(before - gambit!.stakeCp);
     expect(world.dungeon.sinkCp).toBe(sinkBefore + gambit!.stakeCp);
     expect(gambit?.targetCp).toBeGreaterThanOrEqual(400);
-    expect(gambit?.endsTick).toBe(world.tick + GAMBIT_DAYS * DAY_TICKS);
+    expect(gambit?.endsTick).toBe(world.tick + GAMBIT.gambitDays * DAY_TICKS);
     expect(
       world.pendingEvents.some(
         (e) => e.type === 'KEEPER_GAMBIT' && e.payload['action'] === 'declared',
@@ -84,7 +83,7 @@ describe('gambit declaration', () => {
   it('respects the cooldown length exactly', () => {
     const world = desperateWorld();
     world.dungeon.lastGambitEndedTick = 0;
-    world.tick = GAMBIT_COOLDOWN_DAYS * DAY_TICKS - 1;
+    world.tick = GAMBIT.gambitCooldownDays * DAY_TICKS - 1;
     maybeDeclareGambit(world);
     expect(world.dungeon.gambit).toBeNull();
   });

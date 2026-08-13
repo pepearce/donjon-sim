@@ -1,4 +1,4 @@
-import { DAY_TICKS } from '@donjon/shared';
+import { DAY_TICKS, defineTunables } from '@donjon/shared';
 import { pushHistory, type Team, type World } from '../types.js';
 
 function rankedRecently(world: World, team: Team): boolean {
@@ -10,12 +10,14 @@ function rankedRecently(world: World, team: Team): boolean {
   return false;
 }
 
-export const DECAY_NUM = 9985;
-export const DECAY_DEN = 10_000;
+export const RANKING = defineTunables('ranking', {
+  decayNum: { default: 9985, min: 0, max: 10_000, label: 'Renown decay numerator' },
+  decayDen: { default: 10_000, min: 1, max: 100_000, label: 'Renown decay denominator' },
+});
 
 export function decayRenown(world: World): void {
   for (const team of world.teams) {
-    team.renownMilli = Math.floor((team.renownMilli * DECAY_NUM) / DECAY_DEN);
+    team.renownMilli = Math.floor((team.renownMilli * RANKING.decayNum) / RANKING.decayDen);
     if (team.renownMilli > team.peakRenownMilli) team.peakRenownMilli = team.renownMilli;
     if (team.renownMilli < 0) team.renownMilli = 0;
   }

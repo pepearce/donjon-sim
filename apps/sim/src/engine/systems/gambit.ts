@@ -1,21 +1,23 @@
-import { DAY_TICKS, RngDomain, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { keeperLine } from '../keeperLines.js';
 import type { World } from '../types.js';
 import { adjustKhanStanding, rungOf } from './standing.js';
 
-export const GAMBIT_DAYS = 3;
-export const GAMBIT_COOLDOWN_DAYS = 10;
-export const GAMBIT_TREASURY_CEILING_CP = 10_000;
-export const GAMBIT_MIN_TREASURY_CP = 1_000;
-export const GAMBIT_WIN_STANDING = 15;
-export const GAMBIT_LOSS_STANDING = -10;
-const GAMBIT_BASE_CHANCE = 0.15;
+export const GAMBIT = defineTunables('gambit', {
+  gambitDays: { default: 3, min: 1, max: 100, label: 'Gambit duration (days)' },
+  gambitCooldownDays: { default: 10, min: 0, max: 365, label: 'Gambit cooldown (days)' },
+  gambitTreasuryCeilingCp: { default: 10_000, min: 0, max: 10_000_000, label: 'Gambit treasury ceiling (cp)' },
+  gambitMinTreasuryCp: { default: 1000, min: 0, max: 10_000_000, label: 'Gambit treasury minimum (cp)' },
+  gambitWinStanding: { default: 15, min: 0, max: 100, label: 'Gambit win standing' },
+  gambitLossStanding: { default: -10, min: -100, max: 0, label: 'Gambit loss standing' },
+  gambitBaseChance: { default: 0.15, min: 0, max: 1, step: 0.01, label: 'Gambit base chance' },
+});
 
 function gambitChance(trait: string): number {
-  if (trait === 'gambler') return GAMBIT_BASE_CHANCE * 3;
-  if (trait === 'miserly') return GAMBIT_BASE_CHANCE * 0.5;
-  return GAMBIT_BASE_CHANCE;
+  if (trait === 'gambler') return GAMBIT.gambitBaseChance * 3;
+  if (trait === 'miserly') return GAMBIT.gambitBaseChance * 0.5;
+  return GAMBIT.gambitBaseChance;
 }
 
 export function maybeDeclareGambit(world: World): void {
@@ -23,9 +25,9 @@ export function maybeDeclareGambit(world: World): void {
   if (d.gambit) return;
   const rung = rungOf(d.standing);
   if (rung !== 'censured' && rung !== 'overseer') return;
-  if (d.treasuryCp >= GAMBIT_TREASURY_CEILING_CP) return;
-  if (d.treasuryCp < GAMBIT_MIN_TREASURY_CP) return;
-  if (world.tick - d.lastGambitEndedTick < GAMBIT_COOLDOWN_DAYS * DAY_TICKS) return;
+  if (d.treasuryCp >= GAMBIT.gambitTreasuryCeilingCp) return;
+  if (d.treasuryCp < GAMBIT.gambitMinTreasuryCp) return;
+  if (world.tick - d.lastGambitEndedTick < GAMBIT.gambitCooldownDays * DAY_TICKS) return;
 
   const rng = rngFor(world.seed, world.tick, RngDomain.KEEPER_GAMBIT, 0);
   if (!rng.chance(gambitChance(d.keeperTrait))) return;
@@ -38,7 +40,7 @@ export function maybeDeclareGambit(world: World): void {
     targetCp: Math.max(400, Math.floor(stake * 0.6)),
     collectedCp: 0,
     startedTick: world.tick,
-    endsTick: world.tick + GAMBIT_DAYS * DAY_TICKS,
+    endsTick: world.tick + GAMBIT.gambitDays * DAY_TICKS,
   };
 
   emit(world, {
@@ -47,7 +49,7 @@ export function maybeDeclareGambit(world: World): void {
       action: 'declared',
       stakeCp: stake,
       targetCp: d.gambit.targetCp,
-      days: GAMBIT_DAYS,
+      days: GAMBIT.gambitDays,
       text: keeperLine(world, 'gambit_declared'),
     },
   });
@@ -72,9 +74,9 @@ export function tickGambit(world: World): void {
     const payout = gambit.stakeCp * 2;
     d.treasuryCp += payout;
     d.mintedCp += payout;
-    adjustKhanStanding(world, GAMBIT_WIN_STANDING);
+    adjustKhanStanding(world, GAMBIT.gambitWinStanding);
   } else {
-    adjustKhanStanding(world, GAMBIT_LOSS_STANDING);
+    adjustKhanStanding(world, GAMBIT.gambitLossStanding);
   }
 
   emit(world, {

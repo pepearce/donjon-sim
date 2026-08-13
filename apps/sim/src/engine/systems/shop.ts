@@ -1,10 +1,13 @@
+import { defineTunables } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { floorOf, roster } from '../world.js';
 import { ECON, atShop, rationPriceCp } from './economy.js';
 import { makeItem } from './loot.js';
 import { clamp, type Team, type World } from '../types.js';
 
-const SHOP_ITEM_GOLD_CP = 2500;
+export const SHOP = defineTunables('shop', {
+  shopItemGoldCp: { default: 2500, min: 0, max: 1_000_000, label: 'Shop item price (cp)' },
+});
 
 export function resupply(world: World, team: Team): void {
   if (!atShop(world, team)) return;
@@ -30,7 +33,7 @@ export function resupply(world: World, team: Team): void {
     });
   }
 
-  if (team.goldCp < SHOP_ITEM_GOLD_CP) return;
+  if (team.goldCp < SHOP.shopItemGoldCp) return;
 
   const item = makeItem(world, depth + 1, null);
   const cost = Math.min(Math.round(item.valueCp * 1.6), Math.floor(team.goldCp * 0.5));

@@ -3,7 +3,7 @@ import { emit } from '../emit.js';
 import { ITEMS } from '../tables.js';
 import { livingRoster } from '../world.js';
 import { ECON } from './economy.js';
-import { LEAN_TREASURY_CP } from './restock.js';
+import { RESTOCK } from './restock.js';
 import { hasTrait } from './traits.js';
 import { RARITY_BASE_CP, RARITY_NAMES, type Hero, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
 
@@ -66,7 +66,7 @@ export function dropLoot(world: World, team: Team, room: Room): void {
   const depth = floor?.depth ?? 1;
   const rng = rngFor(world.seed, world.tick, RngDomain.LOOT_ROLL, room.id);
 
-  const lean = world.dungeon.treasuryCp < LEAN_TREASURY_CP;
+  const lean = world.dungeon.treasuryCp < RESTOCK.leanTreasuryCp;
   const coin = Math.round((30 + 45 * depth) * (0.5 + rng.float()) * (lean ? 0.6 : 1));
   const item = rng.chance(0.45) ? makeItem(world, depth, null) : null;
   const supplies = rng.chance(0.3) ? rng.int(3, 9) : 0;

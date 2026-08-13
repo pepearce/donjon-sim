@@ -1,4 +1,4 @@
-import { RngDomain, rngFor } from '@donjon/shared';
+import { RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { floorOf, livingRoster, monstersIn, roster } from '../world.js';
 import { traitFrac } from './traits.js';
 import { doctrineFor } from './doctrine.js';
@@ -17,8 +17,10 @@ export const COMMIT_TICKS: Record<Action, number> = {
   RESUPPLY: 20,
 };
 
-const COMMIT_BONUS = 12e6;
-const EMERGENCY_BONUS = 60e6;
+export const TEAM_AI = defineTunables('teamAi', {
+  commitBonus: { default: 12_000_000, min: 0, max: 1_000_000_000, label: 'Commit bonus (micro)' },
+  emergencyBonus: { default: 60_000_000, min: 0, max: 1_000_000_000, label: 'Emergency bonus (micro)' },
+});
 
 export interface AiContext {
   hpFrac: number;
@@ -208,9 +210,9 @@ export function chooseAction(world: World, team: Team): Action {
   const quantised = new Map<Action, number>();
   for (const action of ORDER) {
     let value = Math.round((raw[action] ?? -1e6) * 1e6);
-    if (action === team.lastAction && world.tick < team.commitUntilTick) value += COMMIT_BONUS;
-    if ((action === 'RETREAT' || action === 'FLEE') && emergency) value += EMERGENCY_BONUS;
-    if (action === 'REST' && ctx.worstHpFrac < 0.15 && !emergency) value += EMERGENCY_BONUS;
+    if (action === team.lastAction && world.tick < team.commitUntilTick) value += TEAM_AI.commitBonus;
+    if ((action === 'RETREAT' || action === 'FLEE') && emergency) value += TEAM_AI.emergencyBonus;
+    if (action === 'REST' && ctx.worstHpFrac < 0.15 && !emergency) value += TEAM_AI.emergencyBonus;
     quantised.set(action, value);
   }
 
