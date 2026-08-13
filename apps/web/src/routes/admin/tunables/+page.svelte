@@ -133,7 +133,7 @@
         Live knobs the keeper's economy and rosters run on. Changes take effect immediately.
       </p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="ml-auto flex items-center gap-3">
       <SpeedControl />
       <input
         class="w-56 rounded-sm ink-hair border-stone-700 bg-stone-900 px-2 py-1.5 text-body-sm text-parchment-100 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-focus"
