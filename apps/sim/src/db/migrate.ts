@@ -345,6 +345,30 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 8,
+  name: 'config-tunables',
+  up(db) {
+    db.exec(`
+      CREATE TABLE config_overrides (
+        key TEXT PRIMARY KEY,
+        value REAL NOT NULL,
+        updated_at INTEGER NOT NULL
+      ) STRICT;
+
+      CREATE TABLE config_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT NOT NULL,
+        old_value REAL,
+        new_value REAL NOT NULL,
+        at INTEGER NOT NULL,
+        actor TEXT NOT NULL
+      ) STRICT;
+      CREATE INDEX config_history_key ON config_history (key, id DESC);
+    `);
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;
