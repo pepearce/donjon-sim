@@ -1,8 +1,9 @@
-import { FLUSH_EVERY, dayOf, watchAt } from '@donjon/shared';
+import { FLUSH_EVERY, dayOf, listTunables, watchAt } from '@donjon/shared';
 import { mix32 } from '@donjon/shared';
 import { loadConfig } from './config.js';
 import { boot, wipeWorld } from './db/boot.js';
 import { rotateEpoch } from './epoch.js';
+import { clearAllOverrides, clearOverride, loadOverrides, saveOverride } from './db/configStore.js';
 import { Flusher } from './db/flush.js';
 import { migrate } from './db/migrate.js';
 import { openDb } from './db/open.js';
@@ -30,6 +31,11 @@ const db = openDb({ path: config.dbPath });
 const migration = migrate(db);
 if (migration.applied.length > 0) {
   dbLog.info(`migrated ${migration.from} -> ${migration.to} (${migration.applied.join(', ')})`);
+}
+
+const skippedOverrides = loadOverrides(db);
+if (skippedOverrides.length > 0) {
+  dbLog.warn(`config: skipped unknown override keys ${skippedOverrides.join(', ')}`);
 }
 
 const { pack, issues } = loadCorePack();
@@ -155,6 +161,10 @@ const admin = createAdminServer({
     uptimeSec: Math.round(process.uptime()),
   }),
   log: (m) => adminLog.info(m),
+  onConfigList: () => listTunables(),
+  onConfigSet: (key, value) => saveOverride(db, key, value, 'admin', Date.now()),
+  onConfigReset: (key) => clearOverride(db, key, 'admin', Date.now()),
+  onConfigResetAll: () => clearAllOverrides(db, 'admin', Date.now()),
 });
 
 admin.listen(config.adminPort, '127.0.0.1', () => {
