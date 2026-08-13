@@ -1,3 +1,4 @@
+import { defineTunables } from '@donjon/shared';
 import type { Rng } from '@donjon/shared';
 import type { Node } from './parse.js';
 
@@ -20,7 +21,9 @@ export interface SelectInput {
   rng: Rng;
 }
 
-export const RECENT_PENALTY = 0.05;
+export const SELECT = defineTunables('content', {
+  recentPenalty: { default: 0.05, min: 0, max: 1, step: 0.01, label: 'Recent-pick weight penalty' },
+});
 
 export function selectTemplate(input: SelectInput): CompiledTemplate | undefined {
   const forType = input.templates.filter((t) => t.type === input.type);
@@ -34,7 +37,7 @@ export function selectTemplate(input: SelectInput): CompiledTemplate | undefined
   const weightOf = (t: CompiledTemplate): number => {
     let w = t.weight;
     for (const tone of t.tone) w *= input.toneWeights[tone] ?? 1;
-    if (input.recentIds.includes(t.id)) w *= RECENT_PENALTY;
+    if (input.recentIds.includes(t.id)) w *= SELECT.recentPenalty;
     return Math.max(0.0001, w);
   };
 
