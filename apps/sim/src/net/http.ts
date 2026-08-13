@@ -1,5 +1,8 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer, type Server } from 'node:http';
 import { createHash } from 'node:crypto';
+import { Hono } from 'hono';
+import { getRequestListener, type HttpBindings } from '@hono/node-server';
+import { RESPONSE_ALREADY_SENT } from '@hono/node-server/utils/response';
 import { PROTOCOL_VERSION, TICK_MS, type BootstrapDTO } from '@donjon/shared';
 import { SIM_VERSION } from '../db/boot.js';
 import { EPOCH } from '../epoch.js';
@@ -24,141 +27,115 @@ export interface HttpDeps {
   onStats(): Record<string, unknown>;
 }
 
-function json(res: ServerResponse, status: number, body: unknown, cache = 'no-store'): void {
-  const payload = JSON.stringify(body);
-  res.writeHead(status, {
+function headers(cache = 'no-store'): Record<string, string> {
+  return {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': cache,
     'Access-Control-Allow-Origin': '*',
-    'Content-Length': Buffer.byteLength(payload),
-  });
-  res.end(payload);
+  };
 }
 
 export function createHttpServer(deps: HttpDeps): Server {
   const { world, hub } = deps;
   const speed = (): number => deps.speed();
 
-  const handler = (req: IncomingMessage, res: ServerResponse): void => {
-    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    const path = url.pathname;
+  const app = new Hono<{ Bindings: HttpBindings }>();
 
-    if (req.method !== 'GET') {
-      json(res, 405, { error: { code: 'method_not_allowed', message: 'GET only' } });
-      return;
+  app.use(async (c, next) => {
+    if (c.req.method !== 'GET') {
+      return c.json({ error: { code: 'method_not_allowed', message: 'GET only' } }, 405, headers());
+    }
+    await next();
+  });
+
+  app.get('/api/v1/floors/:id{[0-9]+}/map', (c) => {
+    const map = projectFloorMap(world, Number(c.req.param('id')));
+    if (!map) {
+      return c.json({ error: { code: 'no_such_floor', message: c.req.path } }, 404, headers());
     }
 
-    const mapMatch = /^\/api\/v1\/floors\/(\d+)\/map$/.exec(path);
-    if (mapMatch) {
-      const map = projectFloorMap(world, Number(mapMatch[1]));
-      if (!map) {
-        json(res, 404, { error: { code: 'no_such_floor', message: path } });
-        return;
-      }
-
-      const etag = `"${createHash('sha1').update(map.tiles).digest('hex').slice(0, 16)}"`;
-      if (req.headers['if-none-match'] === etag) {
-        res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' });
-        res.end();
-        return;
-      }
-
-      const payload = JSON.stringify(map);
-      res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        ETag: etag,
-        'Access-Control-Allow-Origin': '*',
-        'Content-Length': Buffer.byteLength(payload),
-      });
-      res.end(payload);
-      return;
+    const etag = `"${createHash('sha1').update(map.tiles).digest('hex').slice(0, 16)}"`;
+    if (c.req.header('if-none-match') === etag) {
+      return c.body(null, 304, { ETag: etag, 'Cache-Control': 'no-cache' });
     }
 
-    const fogMatch = /^\/api\/v1\/teams\/(\d+)\/fog$/.exec(path);
-    if (fogMatch) {
-      const team = world.teams.find((t) => t.id === Number(fogMatch[1]));
-      if (!team) {
-        json(res, 404, { error: { code: 'no_such_team', message: path } });
-        return;
-      }
-      const byFloor: Record<string, number[]> = {};
-      for (const key of team.explored) {
-        const [floorId, roomIdx] = key.split(':');
-        if (floorId === undefined || roomIdx === undefined) continue;
-        (byFloor[floorId] ??= []).push(Number(roomIdx));
-      }
+    return c.json(map, 200, { ...headers('no-cache'), ETag: etag });
+  });
 
-      const floor = world.floors.find((f) => f.id === team.floorId);
-      const sight = new Set<number>([team.roomIdx]);
-      if (floor) {
-        for (const near of floor.adjacency[team.roomIdx] ?? []) sight.add(near);
-      }
+  app.get('/api/v1/teams/:id{[0-9]+}/fog', (c) => {
+    const team = world.teams.find((t) => t.id === Number(c.req.param('id')));
+    if (!team) {
+      return c.json({ error: { code: 'no_such_team', message: c.req.path } }, 404, headers());
+    }
+    const byFloor: Record<string, number[]> = {};
+    for (const key of team.explored) {
+      const [floorId, roomIdx] = key.split(':');
+      if (floorId === undefined || roomIdx === undefined) continue;
+      (byFloor[floorId] ??= []).push(Number(roomIdx));
+    }
 
-      json(res, 200, {
+    const floor = world.floors.find((f) => f.id === team.floorId);
+    const sight = new Set<number>([team.roomIdx]);
+    if (floor) {
+      for (const near of floor.adjacency[team.roomIdx] ?? []) sight.add(near);
+    }
+
+    return c.json(
+      {
         teamId: team.id,
         floorId: team.floorId,
         roomIdx: team.roomIdx,
         explored: byFloor,
         sight: [...sight],
         tiles: encodeFog(team),
-      });
-      return;
-    }
+      },
+      200,
+      headers(),
+    );
+  });
 
-    const detailMatch = /^\/api\/v1\/teams\/(\d+)\/detail$/.exec(path);
-    if (detailMatch) {
-      const detail = projectTeamDetail(world, Number(detailMatch[1]));
-      if (!detail) {
-        json(res, 404, { error: { code: 'no_such_team', message: path } });
-        return;
-      }
-      json(res, 200, detail);
-      return;
+  app.get('/api/v1/teams/:id{[0-9]+}/detail', (c) => {
+    const detail = projectTeamDetail(world, Number(c.req.param('id')));
+    if (!detail) {
+      return c.json({ error: { code: 'no_such_team', message: c.req.path } }, 404, headers());
     }
+    return c.json(detail, 200, headers());
+  });
 
-    switch (path) {
-      case '/api/v1/bootstrap': {
-        const body: BootstrapDTO = {
-          server: {
-            simVersion: SIM_VERSION,
-            protocol: PROTOCOL_VERSION,
-            tickMs: TICK_MS,
-            speed: speed(),
-            epoch: EPOCH,
-          },
-          snapshot: projectSnapshot(world, hub.cursor, speed()),
-          cursor: hub.cursor,
-          streamUrl: '/api/v1/stream',
-        };
-        json(res, 200, body);
-        return;
-      }
-      case '/api/v1/state':
-        json(res, 200, projectSnapshot(world, hub.cursor, speed()));
-        return;
-      case '/api/v1/teams':
-        json(res, 200, { teams: projectTeams(world) });
-        return;
-      case '/api/v1/floors':
-        json(res, 200, { floors: projectFloorIndex(world) }, 'max-age=60');
-        return;
-      case '/api/v1/stream': {
-        const raw = url.searchParams.get('since');
-        const since = raw === null || raw === '' ? null : Number(raw);
-        hub.add(res, world, Number.isFinite(since) ? since : null);
-        return;
-      }
-      case '/healthz':
-        json(res, 200, { ok: true, tick: world.tick });
-        return;
-      case '/metrics':
-        json(res, 200, deps.onStats());
-        return;
-      default:
-        json(res, 404, { error: { code: 'not_found', message: path } });
-    }
-  };
+  app.get('/api/v1/bootstrap', (c) => {
+    const body: BootstrapDTO = {
+      server: {
+        simVersion: SIM_VERSION,
+        protocol: PROTOCOL_VERSION,
+        tickMs: TICK_MS,
+        speed: speed(),
+        epoch: EPOCH,
+      },
+      snapshot: projectSnapshot(world, hub.cursor, speed()),
+      cursor: hub.cursor,
+      streamUrl: '/api/v1/stream',
+    };
+    return c.json(body, 200, headers());
+  });
 
-  return createServer(handler);
+  app.get('/api/v1/state', (c) => c.json(projectSnapshot(world, hub.cursor, speed()), 200, headers()));
+
+  app.get('/api/v1/teams', (c) => c.json({ teams: projectTeams(world) }, 200, headers()));
+
+  app.get('/api/v1/floors', (c) => c.json({ floors: projectFloorIndex(world) }, 200, headers('max-age=60')));
+
+  app.get('/api/v1/stream', (c) => {
+    const raw = c.req.query('since');
+    const since = raw === undefined || raw === '' ? null : Number(raw);
+    hub.add(c.env.outgoing, world, Number.isFinite(since) ? since : null);
+    return RESPONSE_ALREADY_SENT;
+  });
+
+  app.get('/healthz', (c) => c.json({ ok: true, tick: world.tick }, 200, headers()));
+
+  app.get('/metrics', (c) => c.json(deps.onStats(), 200, headers()));
+
+  app.notFound((c) => c.json({ error: { code: 'not_found', message: c.req.path } }, 404, headers()));
+
+  return createServer(getRequestListener(app.fetch));
 }

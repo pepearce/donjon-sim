@@ -1,5 +1,8 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { Hono, type Context } from 'hono';
+import { getRequestListener, type HttpBindings } from '@hono/node-server';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 export interface AdminDeps {
   token: string;
@@ -16,10 +19,7 @@ export interface AdminDeps {
   onConfigResetAll(): number;
 }
 
-function unauthorised(res: ServerResponse): void {
-  res.writeHead(403, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: { code: 'forbidden', message: 'admin is loopback + token only' } }));
-}
+type Env = { Bindings: HttpBindings };
 
 function tokenMatches(expected: string, provided: string | undefined): boolean {
   if (!provided) return false;
@@ -35,124 +35,89 @@ function isLoopback(req: IncomingMessage): boolean {
   return local && req.headers['x-forwarded-for'] === undefined;
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
-function fail(res: ServerResponse, status: number, code: string, message: string): void {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: { code, message } }));
+function fail(c: Context<Env>, status: ContentfulStatusCode, code: string, message: string): Response {
+  return c.json({ error: { code, message } }, status);
 }
 
 export function createAdminServer(deps: AdminDeps): Server {
-  const handler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    if (!isLoopback(req) || !tokenMatches(deps.token, req.headers['x-donjon-admin-token'] as string | undefined)) {
-      unauthorised(res);
-      return;
+  const app = new Hono<Env>();
+
+  app.use(async (c, next) => {
+    if (!isLoopback(c.env.incoming) || !tokenMatches(deps.token, c.req.header('x-donjon-admin-token'))) {
+      return fail(c, 403, 'forbidden', 'admin is loopback + token only');
     }
-
-    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-    const path = url.pathname;
-    const json = (body: unknown): void => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(body));
-    };
-
-    deps.log(`admin ${req.method} ${path}${url.search}`);
-
-    if (path === '/admin/config') {
-      if (req.method !== 'GET') {
-        fail(res, 405, 'bad_method', `${req.method ?? ''} not allowed`);
-        return;
-      }
-      json({ ok: true, tunables: deps.onConfigList() });
-      return;
-    }
-
-    if (path === '/admin/config/reset-all' && req.method === 'POST') {
-      json({ ok: true, cleared: deps.onConfigResetAll() });
-      return;
-    }
-
-    if (path.startsWith('/admin/config/')) {
-      const key = decodeURIComponent(path.slice('/admin/config/'.length));
-      if (req.method === 'PUT') {
-        let value: unknown;
-        try {
-          value = (JSON.parse(await readBody(req)) as { value?: unknown }).value;
-        } catch {
-          fail(res, 400, 'bad_json', 'body must be JSON like {"value": 123}');
-          return;
-        }
-        if (typeof value !== 'number' || !Number.isFinite(value)) {
-          fail(res, 400, 'bad_value', 'value must be a finite number');
-          return;
-        }
-        try {
-          json({ ok: true, tunable: deps.onConfigSet(key, value) });
-        } catch {
-          fail(res, 404, 'unknown_key', key);
-        }
-        return;
-      }
-      if (req.method === 'DELETE') {
-        try {
-          json({ ok: true, tunable: deps.onConfigReset(key) });
-        } catch {
-          fail(res, 404, 'unknown_key', key);
-        }
-        return;
-      }
-      fail(res, 405, 'bad_method', `${req.method ?? ''} not allowed`);
-      return;
-    }
-
-    switch (path) {
-      case '/admin/pause':
-        deps.onPause();
-        json({ ok: true, status: 'paused' });
-        return;
-      case '/admin/resume':
-        deps.onResume();
-        json({ ok: true, status: 'running' });
-        return;
-      case '/admin/step': {
-        const n = Math.max(1, Math.min(10_000, Number(url.searchParams.get('n') ?? 1)));
-        deps.onStep(n);
-        json({ ok: true, stepped: n });
-        return;
-      }
-      case '/admin/speed': {
-        const multiplier = Number(url.searchParams.get('x') ?? 1);
-        if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 1000) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: { code: 'bad_speed', message: 'x must be in (0, 1000]' } }));
-          return;
-        }
-        deps.onSpeed(multiplier);
-        json({ ok: true, speed: multiplier });
-        return;
-      }
-      case '/admin/checkpoint':
-        json({ ok: true, ...deps.onCheckpoint() });
-        return;
-      case '/admin/diag':
-        json(deps.onDiag());
-        return;
-      default:
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: { code: 'not_found', message: path } }));
-    }
-  };
-
-  return createServer((req, res) => {
-    void handler(req, res).catch(() => {
-      fail(res, 500, 'internal', 'admin handler failed');
-    });
+    const url = new URL(c.req.url);
+    deps.log(`admin ${c.req.method} ${url.pathname}${url.search}`);
+    await next();
   });
+
+  app.get('/admin/config', (c) => c.json({ ok: true, tunables: deps.onConfigList() }));
+  app.all('/admin/config', (c) => fail(c, 405, 'bad_method', `${c.req.method} not allowed`));
+
+  app.post('/admin/config/reset-all', (c) => c.json({ ok: true, cleared: deps.onConfigResetAll() }));
+
+  app.put('/admin/config/:key', async (c) => {
+    const key = c.req.param('key');
+    let value: unknown;
+    try {
+      value = ((await c.req.json()) as { value?: unknown }).value;
+    } catch {
+      return fail(c, 400, 'bad_json', 'body must be JSON like {"value": 123}');
+    }
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return fail(c, 400, 'bad_value', 'value must be a finite number');
+    }
+    try {
+      return c.json({ ok: true, tunable: deps.onConfigSet(key, value) });
+    } catch {
+      return fail(c, 404, 'unknown_key', key);
+    }
+  });
+
+  app.delete('/admin/config/:key', (c) => {
+    const key = c.req.param('key');
+    try {
+      return c.json({ ok: true, tunable: deps.onConfigReset(key) });
+    } catch {
+      return fail(c, 404, 'unknown_key', key);
+    }
+  });
+
+  app.all('/admin/config/*', (c) => fail(c, 405, 'bad_method', `${c.req.method} not allowed`));
+
+  app.all('/admin/pause', (c) => {
+    deps.onPause();
+    return c.json({ ok: true, status: 'paused' });
+  });
+
+  app.all('/admin/resume', (c) => {
+    deps.onResume();
+    return c.json({ ok: true, status: 'running' });
+  });
+
+  app.all('/admin/step', (c) => {
+    const raw = Number(c.req.query('n') ?? 1);
+    const n = Math.max(1, Math.min(10_000, Number.isFinite(raw) ? raw : 1));
+    deps.onStep(n);
+    return c.json({ ok: true, stepped: n });
+  });
+
+  app.all('/admin/speed', (c) => {
+    const multiplier = Number(c.req.query('x') ?? 1);
+    if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 1000) {
+      return fail(c, 400, 'bad_speed', 'x must be in (0, 1000]');
+    }
+    deps.onSpeed(multiplier);
+    return c.json({ ok: true, speed: multiplier });
+  });
+
+  app.all('/admin/checkpoint', (c) => c.json({ ok: true, ...deps.onCheckpoint() }));
+
+  app.all('/admin/diag', (c) => c.json(deps.onDiag()));
+
+  app.notFound((c) => c.json({ error: { code: 'not_found', message: c.req.path } }, 404));
+
+  app.onError((_err, c) => fail(c, 500, 'internal', 'admin handler failed'));
+
+  return createServer(getRequestListener(app.fetch));
 }
