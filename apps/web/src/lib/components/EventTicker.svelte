@@ -36,6 +36,7 @@
     'KEEPER_RUNG_CHANGED',
     'KHAN_OVERSEER',
     'KEEPER_GAMBIT',
+    'TEAM_ESTATE_SEIZED',
   ]);
   const STORY = new Set([
     'HERO_BOND_FORMED',

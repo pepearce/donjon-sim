@@ -52,6 +52,7 @@ export const EVENT_TYPES = [
   'KEEPER_RUNG_CHANGED',
   'KHAN_OVERSEER',
   'KEEPER_GAMBIT',
+  'TEAM_ESTATE_SEIZED',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -98,6 +99,7 @@ export const SEVERITY: Record<EventType, Severity> = {
   TEAM_DISBANDED: 2,
   HERO_NEMESIS_SET: 2,
   ROOM_LANDMARK: 2,
+  TEAM_ESTATE_SEIZED: 2,
   HERO_DEATH: 3,
   TEAM_WIPE: 3,
   TEAM_FORMED: 3,

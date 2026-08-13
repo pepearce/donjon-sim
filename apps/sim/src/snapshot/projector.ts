@@ -315,6 +315,8 @@ export function describeEvent(
       return `${NUM(payload['count'])} of the staff walked off the job unpaid`;
     case 'KHAN_FORECLOSURE':
       return `The Grand Khan foreclosed on the dungeon after ${NUM(payload['days'])} days of insolvency, ${NUM(payload['debtCp'])}cp outstanding`;
+    case 'TEAM_ESTATE_SEIZED':
+      return `The Keeper seized ${STR(payload['team'])}'s abandoned strongbox, ${NUM(payload['cp'])}cp to the vault`;
     case 'KEEPER_RUNG_CHANGED':
       return `The Khan's regard shifts: ${STR(payload['from'])} to ${STR(payload['to'])} — ${STR(payload['text'])}`;
     case 'KHAN_OVERSEER':

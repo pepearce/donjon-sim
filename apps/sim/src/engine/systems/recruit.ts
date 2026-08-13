@@ -94,8 +94,17 @@ export function formTeams(world: World): void {
   }
 
   const team = makeTeam(world, rng, heroes);
-  team.goldCp = 1_200;
-  world.dungeon.mintedCp += 1_200;
+  let bank = 0;
+  for (const hero of heroes) {
+    const chip = Math.floor(hero.goldCp / 2);
+    hero.goldCp -= chip;
+    bank += chip;
+  }
+  if (bank < 1_200) {
+    world.dungeon.mintedCp += 1_200 - bank;
+    bank = 1_200;
+  }
+  team.goldCp = bank;
 
   emit(world, {
     type: 'TEAM_FORMED',
@@ -110,6 +119,26 @@ export function retireStragglers(world: World): void {
     const crew = roster(world, team);
     if (crew.some((h) => h.state === 'downed')) continue;
 
+    const survivors = crew.filter((h) => h.state !== 'dead');
+    const bank = Math.round(team.goldCp) + Math.round(team.carriedCp);
+    if (bank > 0) {
+      team.goldCp = 0;
+      team.carriedCp = 0;
+      if (survivors.length > 0) {
+        const share = Math.floor(bank / survivors.length);
+        for (const hero of survivors) hero.goldCp += share;
+        const first = survivors[0];
+        if (first) first.goldCp += bank - share * survivors.length;
+      } else {
+        world.dungeon.treasuryCp += bank;
+        emit(world, {
+          type: 'TEAM_ESTATE_SEIZED',
+          teamId: team.id,
+          payload: { team: team.name, cp: bank },
+        });
+      }
+    }
+
     for (const hero of crew) {
       if (hero.state === 'dead') continue;
       hero.teamId = null;
@@ -118,6 +147,9 @@ export function retireStragglers(world: World): void {
         world.tavern.push(hero.id);
         continue;
       }
+      const purse = hero.goldCp;
+      world.dungeon.sinkCp += purse;
+      hero.goldCp = 0;
       emit(world, {
         type: 'HERO_RETIRED',
         heroId: hero.id,
@@ -125,7 +157,7 @@ export function retireStragglers(world: World): void {
           hero: hero.name,
           level: hero.level,
           className: hero.className,
-          goldCp: hero.goldCp,
+          goldCp: purse,
           epithet: hero.epithet,
           kills: hero.kills,
         },

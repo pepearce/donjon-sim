@@ -299,6 +299,15 @@ export const KEEPER_ACTIONS: KeeperActionDef[] = [
     entryFeeCp: 100,
   },
   {
+    id: 'fee_restore',
+    text: 'the door price returns to its proper figure',
+    costCp: 0,
+    reserveCp: 0,
+    cooldownDays: 3,
+    weights: { bankrupt: 3, panicked: 0, greedy: 2, content: 1 },
+    entryFeeCp: 500,
+  },
+  {
     id: 'corpse_tax_up',
     text: 'corpse tax raised, effective immediately',
     costCp: 0,
