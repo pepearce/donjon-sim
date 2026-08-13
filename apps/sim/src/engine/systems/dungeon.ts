@@ -7,6 +7,13 @@ import { clamp, type KeeperScheme, type Team, type World } from '../types.js';
 
 const REVENUE_TARGET_CP = 9000;
 const LOAN_CP = 25_000;
+export const REPAY_FLOOR_CP = 8_000;
+export const AUSTERITY_LIFT_FLOOR_CP = 5_000;
+
+export function austerityLiftCp(world: World): number {
+  const wages = world.monsters.reduce((n, m) => n + (m.alive ? m.wageCpPerDay : 0), 0);
+  return Math.max(AUSTERITY_LIFT_FLOOR_CP, Math.round(wages * 1.5));
+}
 const SCHEME_KINDS = ['bankrupt', 'blood_quota', 'stop_descent', 'toll_harvest'];
 const SCHEME_DAYS = 3;
 const SCHEME_FLOOR_BOOST = 1.15;
@@ -68,8 +75,17 @@ export function resolveLoan(world: World): void {
     return;
   }
 
-  if (d.treasuryCp > 20_000 && d.loanCp > 0) {
-    const pay = Math.min(d.loanCp, Math.floor(d.treasuryCp * 0.25));
+  if (d.austerity && d.treasuryCp >= austerityLiftCp(world)) {
+    d.austerity = false;
+    emit(world, {
+      type: 'KEEPER_DECREE',
+      payload: { decree: 'wages_resume', text: 'wages resume, the arrears quietly forgotten' },
+    });
+  }
+
+  if (d.treasuryCp > REPAY_FLOOR_CP && d.loanCp > 0) {
+    const pay = Math.min(d.loanCp, Math.floor((d.treasuryCp - REPAY_FLOOR_CP) * 0.25));
+    if (pay <= 0) return;
     d.treasuryCp -= pay;
     d.sinkCp += pay;
     d.loanCp -= pay;

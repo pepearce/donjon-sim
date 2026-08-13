@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
 import { newWorld } from '../src/engine/setup.js';
 import { FORECLOSE_DAYS, dailyUpkeep } from '../src/engine/systems/economy.js';
-import { resolveLoan } from '../src/engine/systems/dungeon.js';
+import { austerityLiftCp, resolveLoan } from '../src/engine/systems/dungeon.js';
+import { hiringBudgetCp } from '../src/engine/systems/restock.js';
 import { adjustKhanStanding, rungOf, updateStandingDaily } from '../src/engine/systems/standing.js';
 import type { World } from '../src/engine/types.js';
 
@@ -88,16 +89,20 @@ describe('updateStandingDaily', () => {
     w.dungeon.standing = 50;
     w.dungeon.treasuryCp = 50_000;
     updateStandingDaily(w, true);
-    expect(w.dungeon.standing).toBe(51);
+    expect(w.dungeon.standing).toBe(52);
+
+    w.dungeon.loanCp = 10_000;
+    updateStandingDaily(w, true);
+    expect(w.dungeon.standing).toBe(53);
 
     w.dungeon.treasuryCp = 1_000;
     updateStandingDaily(w, true);
-    expect(w.dungeon.standing).toBe(49);
+    expect(w.dungeon.standing).toBe(51);
 
     w.dungeon.treasuryCp = 50_000;
     w.dungeon.austerity = true;
     updateStandingDaily(w, true);
-    expect(w.dungeon.standing).toBe(47);
+    expect(w.dungeon.standing).toBe(49);
   });
 });
 
@@ -169,5 +174,69 @@ describe('foreclosure gate', () => {
         (e) => e.type === 'KEEPER_DECREE' && e.payload['decree'] === 'foreclosure_imminent',
       ),
     ).toBe(true);
+  });
+});
+
+describe('recovery', () => {
+  it('repays the loan in installments from the surplus above the floor', () => {
+    const w = world();
+    w.dungeon.loanCp = 12_000;
+    w.dungeon.treasuryCp = 11_000;
+    resolveLoan(w);
+    expect(w.dungeon.treasuryCp).toBe(11_000 - 750);
+    expect(w.dungeon.loanCp).toBe(12_000 - 750);
+  });
+
+  it('never repays the treasury below the floor', () => {
+    const w = world();
+    w.dungeon.loanCp = 25_000;
+    w.dungeon.treasuryCp = 8_000;
+    resolveLoan(w);
+    expect(w.dungeon.treasuryCp).toBe(8_000);
+    expect(w.dungeon.loanCp).toBe(25_000);
+  });
+
+  it('lifts austerity once the treasury can carry the wage bill', () => {
+    const w = world();
+    w.dungeon.austerity = true;
+    w.dungeon.loanCp = 12_000;
+    w.dungeon.treasuryCp = Math.max(austerityLiftCp(w), 9_000);
+    resolveLoan(w);
+    expect(w.dungeon.austerity).toBe(false);
+    expect(
+      w.pendingEvents.some(
+        (e) => e.type === 'KEEPER_DECREE' && e.payload['decree'] === 'wages_resume',
+      ),
+    ).toBe(true);
+    expect(w.dungeon.loanCp).toBeLessThan(12_000);
+  });
+
+  it('re-enters austerity only below the distress line', () => {
+    const w = world();
+    w.dungeon.loanCp = 12_000;
+    w.dungeon.treasuryCp = 7_000;
+    resolveLoan(w);
+    expect(w.dungeon.austerity).toBe(false);
+
+    w.dungeon.treasuryCp = 4_000;
+    resolveLoan(w);
+    expect(w.dungeon.austerity).toBe(true);
+  });
+});
+
+describe('hiring budget', () => {
+  it('freezes hiring to the austerity floor while wages go unpaid', () => {
+    const w = world();
+    w.dungeon.austerity = true;
+    w.dungeon.treasuryCp = 500_000;
+    expect(hiringBudgetCp(w)).toBe(5_000);
+  });
+
+  it('scales the payroll budget with the treasury when solvent', () => {
+    const w = world();
+    w.dungeon.treasuryCp = 100_000;
+    expect(hiringBudgetCp(w)).toBe(20_000);
+    w.dungeon.treasuryCp = 1_000;
+    expect(hiringBudgetCp(w)).toBe(5_000);
   });
 });

@@ -20,7 +20,7 @@ export function payrollCp(world: World): number {
 }
 
 export function hiringBudgetCp(world: World): number {
-  if (world.dungeon.austerity) return Infinity;
+  if (world.dungeon.austerity) return AUSTERITY_PAYROLL_CP;
   return Math.max(AUSTERITY_PAYROLL_CP, world.dungeon.treasuryCp * 0.2);
 }
 

@@ -277,7 +277,7 @@ export const KEEPER_ACTIONS: KeeperActionDef[] = [
     costCp: 0,
     reserveCp: 0,
     cooldownDays: 2,
-    weights: { bankrupt: 0, panicked: 2, greedy: 0, content: 1 },
+    weights: { bankrupt: 0, panicked: 0, greedy: 0, content: 1 },
     tollBp: 1000,
   },
   {
@@ -286,7 +286,7 @@ export const KEEPER_ACTIONS: KeeperActionDef[] = [
     costCp: 0,
     reserveCp: 0,
     cooldownDays: 3,
-    weights: { bankrupt: 0, panicked: 4, greedy: 0, content: 0 },
+    weights: { bankrupt: 0, panicked: 1, greedy: 0, content: 0 },
     entryFeeCp: 0,
   },
   {

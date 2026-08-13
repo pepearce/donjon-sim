@@ -71,6 +71,6 @@ export function updateStandingDaily(world: World, wagesPaidInFull: boolean): voi
   if (d.austerity || d.treasuryCp < SOLVENT_TREASURY_CP) {
     adjustKhanStanding(world, -2);
   } else if (wagesPaidInFull) {
-    adjustKhanStanding(world, 1);
+    adjustKhanStanding(world, d.loanCp === 0 ? 2 : 1);
   }
 }

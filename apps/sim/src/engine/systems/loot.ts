@@ -3,6 +3,7 @@ import { emit } from '../emit.js';
 import { ITEMS } from '../tables.js';
 import { livingRoster } from '../world.js';
 import { COIN_SETPOINT, RATION_CAP } from './economy.js';
+import { LEAN_TREASURY_CP } from './restock.js';
 import { hasTrait } from './traits.js';
 import { RARITY_BASE_CP, RARITY_NAMES, type Hero, type Item, type Rarity, type Room, type Team, type World } from '../types.js';
 
@@ -65,7 +66,8 @@ export function dropLoot(world: World, team: Team, room: Room): void {
   const depth = floor?.depth ?? 1;
   const rng = rngFor(world.seed, world.tick, RngDomain.LOOT_ROLL, room.id);
 
-  const coin = Math.round((30 + 45 * depth) * (0.5 + rng.float()));
+  const lean = world.dungeon.treasuryCp < LEAN_TREASURY_CP;
+  const coin = Math.round((30 + 45 * depth) * (0.5 + rng.float()) * (lean ? 0.6 : 1));
   const item = rng.chance(0.45) ? makeItem(world, depth, null) : null;
   const supplies = rng.chance(0.3) ? rng.int(3, 9) : 0;
   if (supplies > 0) team.rations = Math.min(RATION_CAP, team.rations + supplies);
@@ -75,12 +77,12 @@ export function dropLoot(world: World, team: Team, room: Room): void {
       world.teams.reduce((n, t) => n + t.goldCp + t.carriedCp, 0) +
       world.heroes.reduce((n, h) => n + h.goldCp, 0),
   );
-  const funded = Math.min(world.dungeon.treasuryCp, Math.round(coin * factor));
+  const funded = Math.min(world.dungeon.treasuryCp, Math.round(coin * factor * (lean ? 0.5 : 1)));
   world.dungeon.treasuryCp -= funded;
   if (funded < coin) world.dungeon.mintedCp += coin - funded;
   else world.dungeon.sinkCp += funded - coin;
 
-  const withheld = Math.floor((coin * world.dungeon.tollBp) / 10000);
+  const withheld = Math.min(coin, Math.floor((coin * world.dungeon.tollBp * (lean ? 2 : 1)) / 10000));
   world.dungeon.treasuryCp += withheld;
   world.dungeon.corpseYieldCp += withheld;
   team.carriedCp += coin - withheld;

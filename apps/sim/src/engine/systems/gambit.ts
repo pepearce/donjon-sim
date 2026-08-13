@@ -35,7 +35,7 @@ export function maybeDeclareGambit(world: World): void {
   d.sinkCp += stake;
   d.gambit = {
     stakeCp: stake,
-    targetCp: Math.max(400, stake),
+    targetCp: Math.max(400, Math.floor(stake * 0.6)),
     collectedCp: 0,
     startedTick: world.tick,
     endsTick: world.tick + GAMBIT_DAYS * DAY_TICKS,
