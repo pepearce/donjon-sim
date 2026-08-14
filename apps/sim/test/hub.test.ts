@@ -32,6 +32,45 @@ function fakeClient(): FakeClient {
   return { res: res, frames };
 }
 
+describe('hub reset', () => {
+  it('restarts the sequence so clients detect the reforge as a regression', () => {
+    const world = newWorld(SEED);
+    for (let i = 0; i < 30; i++) step(world);
+
+    const hub = new Hub(30);
+    hub.add(fakeClient().res, world, null);
+    for (let i = 0; i < 3; i++) {
+      step(world);
+      hub.broadcast(world);
+    }
+    const seqBefore = hub.cursor;
+    expect(seqBefore).toBeGreaterThan(0);
+
+    hub.reset();
+    expect(hub.cursor).toBe(0);
+
+    const watcher = fakeClient();
+    const snapshots: number[] = [];
+    const rawWrite = watcher.res.write.bind(watcher.res);
+    watcher.res.write = ((chunk: string | Buffer) => {
+      const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+      for (const block of text.split('\n\n')) {
+        if (!block.startsWith('event: snapshot')) continue;
+        const line = block.split('\n').find((l) => l.startsWith('data: '));
+        if (line) snapshots.push((JSON.parse(line.slice(6)) as { seq: number }).seq);
+      }
+      return rawWrite(chunk);
+    }) as typeof watcher.res.write;
+
+    hub.add(watcher.res, world, seqBefore);
+    step(world);
+    hub.broadcast(world);
+
+    expect(snapshots.length).toBeGreaterThan(0);
+    for (const seq of snapshots) expect(seq).toBeLessThan(seqBefore);
+  });
+});
+
 describe('hub keeps a broadcast-aligned delta baseline', () => {
   it('still interpolates movement when another client connects mid-window', () => {
     const world = newWorld(SEED);

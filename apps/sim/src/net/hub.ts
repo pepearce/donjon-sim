@@ -157,9 +157,11 @@ export class Hub {
   }
 
   reset(): void {
+    this.seq = 0;
     this.ring.length = 0;
     this.lastSnapshot = null;
     this.cachedSnapshot = null;
+    this.stats.seq = 0;
     this.stats.ringSize = 0;
   }
 
