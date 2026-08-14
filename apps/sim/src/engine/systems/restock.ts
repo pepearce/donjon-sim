@@ -1,7 +1,8 @@
 import { DAY_TICKS, RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { GUARDIAN_NAMES, MONSTERS } from '../tables.js';
+import { APEX_NAMES, GUARDIAN_NAMES, MONSTERS } from '../tables.js';
 import { floorOf } from '../world.js';
+import { APEX, effectiveDangerCr, isApexRoom } from './apex.js';
 import { monsterFromCr } from './combat.js';
 import { schemeAggressionFactor } from './dungeon.js';
 import { armTrap } from './traps.js';
@@ -26,7 +27,43 @@ export function hiringBudgetCp(world: World): number {
   return Math.max(RESTOCK.austerityPayrollCp, world.dungeon.treasuryCp * 0.2);
 }
 
+function stockApex(world: World, floor: Floor, room: Room): void {
+  const rng = rngFor(world.seed, world.tick, RngDomain.ROOM_STOCK, room.id);
+  const pool = MONSTERS.filter((m) => m.guardian);
+  const archetype = pool[pool.length - 1] ?? rng.pick(MONSTERS);
+  const cr = Math.max(1, effectiveDangerCr(world, floor) * APEX.crMult);
+  const boss = monsterFromCr(world, archetype.name, cr, room.id, floor.id, true, true);
+  world.monsters.push(boss);
+
+  const nameRng = rngFor(world.seed, world.tick, RngDomain.MONSTER_PICK, boss.id);
+  const titled = nameRng.pick(APEX_NAMES);
+  emit(world, {
+    type: 'APEX_SUMMONED',
+    floorId: floor.id,
+    roomId: room.id,
+    payload: {
+      monster: titled.name,
+      title: titled.title,
+      archetype: boss.name,
+      depth: floor.depth,
+      floor: floor.name,
+      cr: Math.round(cr * 10) / 10,
+      cp: boss.wageCpPerDay,
+      wageCp: boss.wageCpPerDay,
+      epoch: world.dungeon.apexEpoch,
+    },
+  });
+
+  room.state = 'stocked';
+  armTrap(world, room, floor.depth);
+}
+
 export function stockRoom(world: World, floor: Floor, room: Room): void {
+  if (isApexRoom(floor, room)) {
+    stockApex(world, floor, room);
+    return;
+  }
+
   const rng = rngFor(world.seed, world.tick, RngDomain.ROOM_STOCK, room.id);
   const aggression = (world.dungeon.aggressionMilli / 1000) * schemeAggressionFactor(world, floor.id);
   const pool = MONSTERS.filter((m) => m.minDepth <= floor.depth);
@@ -41,7 +78,7 @@ export function stockRoom(world: World, floor: Floor, room: Room): void {
     const archetype = isGuardianRoom
       ? (pool.filter((m) => m.guardian)[0] ?? rng.pick(pool))
       : rng.pick(world.dungeon.austerity ? cheap : pool);
-    const cr = Math.max(0.5, (floor.dangerCr + archetype.crBias) * aggression);
+    const cr = Math.max(0.5, (effectiveDangerCr(world, floor) + archetype.crBias) * aggression);
     const monster = monsterFromCr(world, archetype.name, cr, room.id, floor.id, archetype.guardian || isGuardianRoom);
     world.monsters.push(monster);
 

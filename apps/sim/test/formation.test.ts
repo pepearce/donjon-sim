@@ -27,6 +27,7 @@ function heroWith(className: string, traits: string[]): Hero {
     bornTick: 0,
     diedTick: null,
     diedWallMs: null,
+    retiredTick: null,
     goldCp: 0,
     items: [],
     traits,

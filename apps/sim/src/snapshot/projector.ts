@@ -569,7 +569,7 @@ export function projectSnapshot(world: World, seq: number, speed: number): Snaps
     keeper: projectKeeper(world),
     leaderboard: projectLeaderboard(world),
     memorial: projectMemorial(world, 12),
-    heroesLiving: world.heroes.filter((h) => h.state !== 'dead').length,
+    heroesLiving: world.heroes.filter((h) => h.state !== 'dead' && h.retiredTick === null).length,
     tavernSize: world.tavern.length,
     monsters: projectMonsters(world),
   };

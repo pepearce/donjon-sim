@@ -11,7 +11,7 @@ export const RECRUIT = defineTunables('recruit', {
 });
 
 export function livingHeroCount(world: World): number {
-  return world.heroes.filter((h) => h.state !== 'dead').length;
+  return world.heroes.filter((h) => h.state !== 'dead' && h.retiredTick === null).length;
 }
 
 export function activeTeamCount(world: World): number {

@@ -3369,5 +3369,127 @@
   "requires": [],
   "text": "The books closed for the last time",
   "fallback": true
+ },
+ {
+  "id": "apex_summoned.00",
+  "type": "APEX_SUMMONED",
+  "weight": 10,
+  "tone": [
+   "epic"
+  ],
+  "requires": [
+   "monster",
+   "title"
+  ],
+  "text": "{monster}, {title}, took up the seal of the deep vault"
+ },
+ {
+  "id": "apex_summoned.01",
+  "type": "APEX_SUMMONED",
+  "weight": 8,
+  "tone": [
+   "dry"
+  ],
+  "requires": [
+   "monster",
+   "cp"
+  ],
+  "text": "The Keeper retained {monster} at {cp|coin} a day, non-negotiable"
+ },
+ {
+  "id": "apex_summoned.02",
+  "type": "APEX_SUMMONED",
+  "weight": 7,
+  "tone": [
+   "grim"
+  ],
+  "requires": [
+   "monster",
+   "floor"
+  ],
+  "text": "Something signed its name in the ledger of {floor}: {monster}"
+ },
+ {
+  "id": "apex_summoned.fallback.00",
+  "type": "APEX_SUMMONED",
+  "weight": 1,
+  "tone": [],
+  "requires": [],
+  "text": "A new power holds the deepest vault",
+  "fallback": true
+ },
+ {
+  "id": "triumph.00",
+  "type": "TRIUMPH",
+  "weight": 10,
+  "tone": [
+   "epic"
+  ],
+  "requires": [
+   "hero",
+   "monster",
+   "team"
+  ],
+  "text": "{hero} struck down {monster}. {team} broke the vault and the dungeon felt it"
+ },
+ {
+  "id": "triumph.01",
+  "type": "TRIUMPH",
+  "weight": 8,
+  "tone": [
+   "absurd"
+  ],
+  "requires": [
+   "team",
+   "cp"
+  ],
+  "text": "{team} emptied the deep vault of {cp|coin}. Accounting has been notified"
+ },
+ {
+  "id": "triumph.02",
+  "type": "TRIUMPH",
+  "weight": 7,
+  "tone": [
+   "grim"
+  ],
+  "requires": [
+   "team"
+  ],
+  "text": "{team} won everything the dungeon had. The dungeon began counting its grudges"
+ },
+ {
+  "id": "triumph.fallback.00",
+  "type": "TRIUMPH",
+  "weight": 1,
+  "tone": [],
+  "requires": [],
+  "text": "The deep vault fell",
+  "fallback": true
+ },
+ {
+  "id": "party_exited.triumph.00",
+  "type": "PARTY_EXITED",
+  "weight": 20,
+  "tone": [
+   "epic"
+  ],
+  "requires": [
+   "team",
+   "triumphant"
+  ],
+  "text": "{team} came up into daylight with the vault's hoard, and the tavern rose to meet them"
+ },
+ {
+  "id": "party_exited.triumph.01",
+  "type": "PARTY_EXITED",
+  "weight": 14,
+  "tone": [
+   "absurd"
+  ],
+  "requires": [
+   "team",
+   "triumphant"
+  ],
+  "text": "{team} retired to the tavern, bought every round, and started at least three feuds"
  }
 ]

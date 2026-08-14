@@ -101,7 +101,7 @@ export function bankLoot(world: World, team: Team): void {
 function staffQuits(world: World): void {
   let gone = 0;
   for (const monster of world.monsters) {
-    if (!monster.alive) continue;
+    if (!monster.alive || monster.apex) continue;
     const rng = rngFor(world.seed, world.tick, RngDomain.STAFF_QUIT, monster.id);
     if (!rng.chance(monster.guardian ? ECON.guardianQuitChance : ECON.quitChance)) continue;
     monster.alive = false;

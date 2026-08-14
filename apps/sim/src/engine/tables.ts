@@ -214,6 +214,10 @@ export const EPITHETS: EpithetRow[] = [
   { id: 'rich_b', text: 'Purse-of-Office', requires: 'rich' },
   { id: 'rich_c', text: 'the Solvent', requires: 'rich' },
   { id: 'rich_d', text: 'Coinsworn', requires: 'rich' },
+  { id: 'triumph_a', text: 'the Vaultbreaker', requires: 'triumph' },
+  { id: 'triumph_b', text: 'Closer of Accounts', requires: 'triumph' },
+  { id: 'triumph_c', text: 'the Fully Audited', requires: 'triumph' },
+  { id: 'triumph_d', text: 'Tenth-Floor Emeritus', requires: 'triumph' },
 ];
 
 export const SCHEME_NAMES = [
@@ -247,6 +251,15 @@ export const GUARDIAN_NAMES: GuardianNameRow[] = [
   { name: 'Dampsworn', title: 'Steward of the Flooded Wing' },
   { name: 'Gallowsfee', title: 'Collector of the Corpse Tax' },
   { name: 'Lastcandle', title: 'Overseer of Closing Hours' },
+];
+
+export const APEX_NAMES: GuardianNameRow[] = [
+  { name: 'The Comptroller', title: 'Final Signatory of the Deep Vault' },
+  { name: 'Ledgerlord Vhast', title: 'Custodian of the Unpayable Sum' },
+  { name: 'The Actuary Imperial', title: 'Assessor of All Outstanding Lives' },
+  { name: 'Sealbreaker Onn', title: 'Warden of the Tenth Landing' },
+  { name: 'The Liquidator', title: 'Executor of Terminal Accounts' },
+  { name: 'Granmother Escrow', title: 'Holder of the Original Deed' },
 ];
 
 export interface KeeperActionDef {

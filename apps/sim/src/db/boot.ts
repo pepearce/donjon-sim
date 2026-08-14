@@ -204,6 +204,7 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         restUntilTick: Number(row2['rest_until_tick']),
         formedTick: Number(row2['formed_tick']),
         disbandedTick: row2['disbanded_tick'] === null ? null : Number(row2['disbanded_tick']),
+        homeboundTick: row2['homebound_tick'] == null ? null : Number(row2['homebound_tick']),
         lastDeepestTick: Number(row2['formed_tick']),
         explored: new Set<string>(JSON.parse(String(row2['explored'] ?? '[]')) as string[]),
         exploredTiles: decodeFog(String(row2['explored_tiles'] ?? '{}')),
@@ -236,6 +237,7 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         bornTick: Number(h['born_tick']),
         diedTick: h['died_tick'] === null ? null : Number(h['died_tick']),
         diedWallMs: h['died_wall_ms'] === null ? null : Number(h['died_wall_ms']),
+        retiredTick: h['retired_tick'] == null ? null : Number(h['retired_tick']),
         goldCp: Number(h['gold_cp']),
         items: [],
         traits: parseArray<string>(h['traits']).filter((t) => typeof t === 'string'),
@@ -270,6 +272,7 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         roomId: Number(m['room_id']),
         floorId: Number(m['floor_id']),
         guardian: Number(m['guardian']) === 1,
+        apex: Number(m['apex'] ?? 0) === 1,
         alive: Number(m['alive']) === 1,
       };
       return monster;
@@ -338,6 +341,8 @@ export function boot(db: Db, seed: number): { world: World; report: BootReport }
         lastGambitEndedTick: Number(dungeonRow['last_gambit_ended_tick'] ?? 0),
         loanTakenTick: Number(dungeonRow['loan_taken_tick'] ?? 0),
         lastBigHaulTeamId: null,
+        apexEpoch: Number(dungeonRow['apex_epoch'] ?? 0),
+        lastTriumphTick: Number(dungeonRow['last_triumph_tick'] ?? 0),
       };
       if (world.dungeon.keeperName === '') {
         const persona = rollKeeperPersona(world.seed);

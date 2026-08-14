@@ -1,5 +1,6 @@
 import { emit } from '../emit.js';
 import { livingRoster } from '../world.js';
+import { effectiveDangerCr } from './apex.js';
 import { awardEpithet } from './epithets.js';
 import { gainTrait } from './traits.js';
 import { MAX_LEVEL, clamp, xpToNext, type Team, type World } from '../types.js';
@@ -21,7 +22,7 @@ export function awardXp(world: World, team: Team, monsterXp: number): void {
   if (living.length === 0) return;
   const floor = world.floors.find((f) => f.id === team.floorId);
   const meanLevel = living.reduce((n, h) => n + h.level, 0) / living.length;
-  const meanCr = floor?.dangerCr ?? 1;
+  const meanCr = floor ? effectiveDangerCr(world, floor) : 1;
   const scale = clamp(0.2, 2.0, 1.5 ** (meanCr - meanLevel));
   const share = Math.max(1, Math.round((monsterXp * scale) / living.length));
 

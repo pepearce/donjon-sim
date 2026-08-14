@@ -42,6 +42,7 @@ export function makeHero(world: World, rng: Rng, level = 1): Hero {
     bornTick: world.tick,
     diedTick: null,
     diedWallMs: null,
+    retiredTick: null,
     goldCp: 0,
     items: [],
     traits: [],
@@ -111,6 +112,7 @@ export function makeTeam(world: World, rng: Rng, roster: Hero[]): Team {
     commitUntilTick: 0,
     formedTick: world.tick,
     disbandedTick: null,
+    homeboundTick: null,
     restUntilTick: 0,
     lastDeepestTick: world.tick,
     explored: new Set<string>(),
@@ -158,6 +160,8 @@ function initialDungeon(seed: number): DungeonState {
     lastGambitEndedTick: 0,
     loanTakenTick: 0,
     lastBigHaulTeamId: null,
+    apexEpoch: 0,
+    lastTriumphTick: 0,
   };
 }
 
@@ -266,6 +270,7 @@ export function worldDigest(w: World): string {
   u32(bytes, w.dungeon.mintedCp);
   u32(bytes, w.dungeon.sinkCp);
   u32(bytes, w.dungeon.scheme?.id ?? 0);
+  u32(bytes, w.dungeon.apexEpoch);
   u32(bytes, w.dungeon.records.length);
   let recordTotal = 0;
   for (const r of w.dungeon.records) recordTotal += r.value;

@@ -1,5 +1,6 @@
 import { DAY_TICKS, DECAY_EVERY } from '@donjon/shared';
 import { emit } from './emit.js';
+import { apexDecayDaily, returnToTavern } from './systems/apex.js';
 import { attemptStabilise, resolveCombatRound } from './systems/combat.js';
 import { resolveBleedOut, sweepCorpse } from './systems/death.js';
 import { bankLoot, canCamp, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
@@ -108,6 +109,8 @@ function applyAction(world: World, team: Team): void {
       if (atEntry(floor, team)) {
         if (floor.depth > 1) {
           ascend(world, team, floor);
+        } else if (team.homeboundTick !== null) {
+          returnToTavern(world, team);
         } else {
           team.lastAction = 'EXPLORE';
           team.commitUntilTick = world.tick + COMMIT_TICKS.EXPLORE;
@@ -219,6 +222,7 @@ export function step(world: World): void {
 
   if (world.tick % DAY_TICKS === 0) {
     dailyUpkeep(world);
+    apexDecayDaily(world);
     updateAggression(world, world.dungeon.heroesSlain, Math.max(1, activeTeamCount(world)));
     keeperAct(world);
     maybeDeclareGambit(world);

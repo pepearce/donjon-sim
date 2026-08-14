@@ -2,6 +2,7 @@ import { RngDomain, rngFor, type Rng } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { floorOf, itemsOf, livingRoster, monstersIn, roster } from '../world.js';
 import { BLEED_OUT_TICKS, clamp, pickWeighted, pushHistory, statMod, type Hero, type Monster, type Team, type World } from '../types.js';
+import { triumph } from './apex.js';
 import { awardXp } from './progression.js';
 import { dropLoot } from './loot.js';
 import { awardEpithet } from './epithets.js';
@@ -42,7 +43,7 @@ export function wageForCr(cr: number): number {
   return Math.round(12 * cr ** 1.25);
 }
 
-export function monsterFromCr(world: World, name: string, cr: number, roomId: number, floorId: number, guardian: boolean): Monster {
+export function monsterFromCr(world: World, name: string, cr: number, roomId: number, floorId: number, guardian: boolean, apex = false): Monster {
   const hpMax = Math.round(8 + 7 * cr);
   return {
     id: world.nextMonsterId++,
@@ -60,6 +61,7 @@ export function monsterFromCr(world: World, name: string, cr: number, roomId: nu
     roomId,
     floorId,
     guardian,
+    apex,
     alive: true,
   };
 }
@@ -99,6 +101,8 @@ function killMonster(world: World, team: Team, hero: Hero, target: Monster, dama
       `${hero.name} put down the ${target.name} that held floor ${depth}.`,
     );
   }
+
+  if (target.apex) triumph(world, team, hero, target);
 
   if (hero.className === 'cutpurse') {
     const skimCp = Math.max(1, Math.round(2 * target.cr));

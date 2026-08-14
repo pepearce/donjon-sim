@@ -369,6 +369,27 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 9,
+  name: 'apex-triumph',
+  up(db) {
+    db.exec(`
+      ALTER TABLE monsters ADD COLUMN apex INTEGER NOT NULL DEFAULT 0 CHECK (apex IN (0, 1));
+      ALTER TABLE heroes ADD COLUMN retired_tick INTEGER;
+      ALTER TABLE dungeon ADD COLUMN apex_epoch INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE dungeon ADD COLUMN last_triumph_tick INTEGER NOT NULL DEFAULT 0;
+    `);
+  },
+});
+
+MIGRATIONS.push({
+  version: 10,
+  name: 'triumphant-homecoming',
+  up(db) {
+    db.exec('ALTER TABLE teams ADD COLUMN homebound_tick INTEGER');
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;

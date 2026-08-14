@@ -1,5 +1,5 @@
 import { RngDomain, defineTunables, rngFor } from '@donjon/shared';
-import { floorOf, livingRoster, monstersIn, roster } from '../world.js';
+import { MAX_FLOORS, floorOf, livingRoster, monstersIn, roster } from '../world.js';
 import { traitFrac } from './traits.js';
 import { doctrineFor } from './doctrine.js';
 import { canCamp, rationPriceCp } from './economy.js';
@@ -94,7 +94,7 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     inCombat: enemies.length > 0,
     roomLootCp: floor.rooms[team.roomIdx]?.lootCp ?? 0,
     roomSafe: enemies.length === 0,
-    hasDeeperFloor: floor.depth < 10,
+    hasDeeperFloor: floor.depth < MAX_FLOORS,
     carriedCp: team.carriedCp,
     canAffordRest: team.goldCp >= 400,
     canRecover: restHere || hearthDist < 255,
@@ -201,6 +201,12 @@ export function chooseAction(world: World, team: Team): Action {
   if (!floor) return 'EXPLORE';
 
   const ctx = buildContext(world, team, floor);
+
+  if (team.homeboundTick !== null && !ctx.inCombat) {
+    if (ctx.worstHpFrac < 0.35 && ctx.canRestHere) return 'REST';
+    return 'RETREAT';
+  }
+
   const ticksSinceDeepest = world.tick - team.lastDeepestTick;
   const raw = score(ctx, ticksSinceDeepest);
 

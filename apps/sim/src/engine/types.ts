@@ -67,6 +67,7 @@ export interface Hero {
   bornTick: number;
   diedTick: number | null;
   diedWallMs: number | null;
+  retiredTick: number | null;
   goldCp: number;
   items: number[];
   traits: string[];
@@ -92,6 +93,7 @@ export interface Monster {
   roomId: number;
   floorId: number;
   guardian: boolean;
+  apex: boolean;
   alive: boolean;
 }
 
@@ -162,6 +164,7 @@ export interface Team {
   commitUntilTick: number;
   formedTick: number;
   disbandedTick: number | null;
+  homeboundTick: number | null;
   restUntilTick: number;
   lastDeepestTick: number;
   explored: Set<string>;
@@ -240,6 +243,8 @@ export interface DungeonState {
   lastGambitEndedTick: number;
   loanTakenTick: number;
   lastBigHaulTeamId: number | null;
+  apexEpoch: number;
+  lastTriumphTick: number;
 }
 
 export interface World {

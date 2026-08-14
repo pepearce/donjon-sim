@@ -37,6 +37,7 @@
     'KHAN_OVERSEER',
     'KEEPER_GAMBIT',
     'TEAM_ESTATE_SEIZED',
+    'APEX_SUMMONED',
   ]);
   const STORY = new Set([
     'HERO_BOND_FORMED',
@@ -50,6 +51,7 @@
     'ROOM_LANDMARK',
     'TEAM_FORMED',
     'RECRUIT',
+    'TRIUMPH',
   ]);
 
   const MOMENT_LABEL: Record<string, string> = {
@@ -67,6 +69,8 @@
     KEEPER_RUNG_CHANGED: "THE KHAN'S FAVOR",
     KHAN_OVERSEER: 'AN OVERSEER',
     KEEPER_GAMBIT: 'A GAMBIT',
+    TRIUMPH: 'A TRIUMPH',
+    APEX_SUMMONED: 'THE VAULT STIRS',
   };
 
   const GLYPHS: Record<string, string> = {
@@ -95,6 +99,8 @@
     HERO_RETIRED: '❧',
     RECRUIT: '✦',
     TEAM_FORMED: '✤',
+    TRIUMPH: '♛',
+    APEX_SUMMONED: '♜',
   };
 
   function tone(type: string): string {
