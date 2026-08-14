@@ -133,6 +133,19 @@ function onArrival(world: World, team: Team, floor: Floor): void {
     });
   }
 
+  if (team.roomIdx === floor.hearthRoom) {
+    let healed = 0;
+    for (const hero of livingRoster(world, team)) {
+      const missing = hero.hpMax - hero.hp;
+      if (missing <= 0) continue;
+      hero.hp = hero.hpMax;
+      healed += missing;
+    }
+    if (healed > 0) {
+      emit(world, { type: 'REST', teamId: team.id, floorId: floor.id, payload: { hp: healed, team: team.name } });
+    }
+  }
+
   resolveTrap(world, team, room);
 
   if (monstersIn(world, floor.id, team.roomIdx).length > 0) {
