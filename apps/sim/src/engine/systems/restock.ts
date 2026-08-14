@@ -28,6 +28,7 @@ export function hiringBudgetCp(world: World): number {
 }
 
 function stockApex(world: World, floor: Floor, room: Room): void {
+  if (world.monsters.some((m) => m.apex && m.alive)) return;
   const rng = rngFor(world.seed, world.tick, RngDomain.ROOM_STOCK, room.id);
   const pool = MONSTERS.filter((m) => m.guardian);
   const archetype = pool[pool.length - 1] ?? rng.pick(MONSTERS);
@@ -120,6 +121,17 @@ export function scheduleRestock(world: World, floor: Floor, room: Room): void {
 export function sweepCleared(world: World): void {
   for (const floor of world.floors) {
     for (const room of floor.rooms) {
+      if (isApexRoom(floor, room)) {
+        if (room.state !== 'cleared') continue;
+        if (world.monsters.some((m) => m.apex && m.alive)) continue;
+        const homeboundHere = world.teams.some(
+          (t) => t.state !== 'disbanded' && t.floorId === floor.id && t.homeboundTick !== null,
+        );
+        if (homeboundHere) continue;
+        room.restockDueTick = world.tick + 1;
+        world.scheduler.schedule(room.restockDueTick, 'RESTOCK', room.id);
+        continue;
+      }
       if (room.idx === floor.entryRoom || room.idx === floor.shopRoom) continue;
       if (room.state !== 'cleared') continue;
       if (room.restockDueTick > world.tick) continue;

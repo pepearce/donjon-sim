@@ -237,6 +237,11 @@ export function exitVault(world: World, team: Team, floor: Floor): void {
   if (team.tileX === ex && team.tileY === ey) {
     bankLoot(world, team);
     returnToTavern(world, team);
+    const arena = floor.rooms[0];
+    if (arena) {
+      arena.restockDueTick = world.tick + 1;
+      world.scheduler.schedule(arena.restockDueTick, 'RESTOCK', arena.id);
+    }
     return;
   }
   if (team.pathPos >= team.path.length) {

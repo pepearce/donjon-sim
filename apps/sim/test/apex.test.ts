@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DAY_TICKS } from '@donjon/shared';
 import { newWorld } from '../src/engine/setup.js';
-import { generateFloor } from '../src/gen/floorgen.js';
+import { generateFloor, vaultExitSpot } from '../src/gen/floorgen.js';
+import { exitVault } from '../src/engine/systems/movement.js';
 import { APEX, apexDecayDaily, effectiveDangerCr, isApexRoom, returnToTavern, triumph } from '../src/engine/systems/apex.js';
 import { stockFloor } from '../src/engine/systems/restock.js';
 import { livingHeroCount } from '../src/engine/systems/recruit.js';
@@ -85,9 +86,39 @@ describe('triumph', () => {
     expect(world.pendingEvents.some((e) => e.type === 'TRIUMPH')).toBe(true);
 
     const bossRoom = world.floors[VAULT_DEPTH - 1]!.rooms.find((r) => r.id === boss.roomId)!;
-    expect(bossRoom.restockDueTick).toBe(world.tick + 1);
     const wakes = world.scheduler.toArray();
-    expect(wakes.some((w) => w.kind === 'RESTOCK' && w.entityId === bossRoom.id)).toBe(true);
+    const rehireQueued = wakes.some((w) => w.kind === 'RESTOCK' && w.entityId === bossRoom.id);
+    if (roster(world, team).length > 0) {
+      expect(team.homeboundTick).toBe(world.tick);
+      expect(rehireQueued).toBe(false);
+    } else {
+      expect(bossRoom.restockDueTick).toBe(world.tick + 1);
+      expect(rehireQueued).toBe(true);
+    }
+  });
+
+  it('hires the next boss when the triumphant team steps out', () => {
+    const world = newWorld(SEED);
+    const { boss } = setupTriumph(world);
+    const vault = world.floors[VAULT_DEPTH - 1]!;
+    const team = world.teams[0]!;
+    triumph(world, team, livingRoster(world, team)[0]!, boss);
+    if (roster(world, team).length === 0) return;
+
+    team.floorId = vault.id;
+    team.roomIdx = 0;
+    const exit = vaultExitSpot(vault);
+    team.tileX = exit[0];
+    team.tileY = exit[1];
+
+    exitVault(world, team, vault);
+
+    expect(team.state).toBe('disbanded');
+    const bossRoom = vault.rooms[0]!;
+    expect(bossRoom.restockDueTick).toBe(world.tick + 1);
+    expect(
+      world.scheduler.toArray().some((w) => w.kind === 'RESTOCK' && w.entityId === bossRoom.id),
+    ).toBe(true);
   });
 
   it('retired heroes leave the roster and stop counting as living', () => {

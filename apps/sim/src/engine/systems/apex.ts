@@ -124,13 +124,14 @@ export function triumph(world: World, team: Team, slayer: Hero, boss: Monster): 
     },
   });
 
-  scheduleApexRehire(world, boss);
   rollRetirements(world, team);
 
   if (roster(world, team).length > 0) {
     team.homeboundTick = world.tick;
     team.lastAction = 'RETREAT';
     team.commitUntilTick = world.tick;
+  } else {
+    scheduleApexRehire(world, boss);
   }
 }
 
