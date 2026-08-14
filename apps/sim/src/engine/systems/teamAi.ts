@@ -1,5 +1,5 @@
 import { RngDomain, defineTunables, rngFor } from '@donjon/shared';
-import { MAX_FLOORS, floorOf, livingRoster, monstersIn, roster } from '../world.js';
+import { VAULT_DEPTH, floorOf, livingRoster, monstersIn, roster } from '../world.js';
 import { traitFrac } from './traits.js';
 import { doctrineFor } from './doctrine.js';
 import { canCamp, rationPriceCp } from './economy.js';
@@ -93,7 +93,7 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     inCombat: enemies.length > 0,
     roomLootCp: floor.rooms[team.roomIdx]?.lootCp ?? 0,
     roomSafe: enemies.length === 0,
-    hasDeeperFloor: floor.depth < MAX_FLOORS,
+    hasDeeperFloor: floor.depth < VAULT_DEPTH,
     carriedCp: team.carriedCp,
     canRecover: restHere || hearthDist < 255,
     canRestHere: restHere,

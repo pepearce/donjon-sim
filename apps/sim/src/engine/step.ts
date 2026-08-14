@@ -13,7 +13,7 @@ import {
 } from './systems/dungeon.js';
 import { maybeDeclareGambit, tickGambit } from './systems/gambit.js';
 import { keeperAct } from './systems/keeper.js';
-import { advanceTeam, ascend, atEntry, descend, onStairs, repath } from './systems/movement.js';
+import { advanceTeam, ascend, atEntry, descend, exitVault, onStairs, repath } from './systems/movement.js';
 import { decayRenown, rankTeams } from './systems/ranking.js';
 import { activeTeamCount, arrivals, formTeams, retireStragglers } from './systems/recruit.js';
 import { updateSurvivorRecord } from './systems/records.js';
@@ -23,7 +23,7 @@ import { resolveRestock, sweepCleared } from './systems/restock.js';
 import { resupply } from './systems/shop.js';
 import { armTrap } from './systems/traps.js';
 import { COMMIT_TICKS, chooseAction } from './systems/teamAi.js';
-import { floorOf, livingRoster, monstersIn, roster } from './world.js';
+import { VAULT_DEPTH, floorOf, livingRoster, monstersIn, roster } from './world.js';
 import { clamp, pushHistory, type Team, type World } from './types.js';
 
 const DISBAND_BROKE_TICKS = DAY_TICKS * 3;
@@ -106,6 +106,10 @@ function applyAction(world: World, team: Team): void {
     }
     case 'RETREAT':
       team.state = 'delving';
+      if (floor.depth === VAULT_DEPTH && team.homeboundTick !== null) {
+        exitVault(world, team, floor);
+        return;
+      }
       if (atEntry(floor, team)) {
         if (floor.depth > 1) {
           ascend(world, team, floor);
@@ -189,7 +193,8 @@ export function step(world: World): void {
     if (team.state === 'fighting') continue;
     if (livingRoster(world, team).length === 0) continue;
 
-    if (team.state !== 'fleeing' && monstersIn(world, team.floorId, team.roomIdx).length > 0) {
+    const passingVault = team.homeboundTick !== null && floorOf(world, team.floorId)?.depth === VAULT_DEPTH;
+    if (team.state !== 'fleeing' && !passingVault && monstersIn(world, team.floorId, team.roomIdx).length > 0) {
       startCombat(world, team);
       continue;
     }

@@ -12,7 +12,7 @@ export * from './types.js';
 
 export const STARTING_TEAMS = 3;
 export const MAX_TEAMS = 10;
-export const MAX_FLOORS = 10;
+export { MAX_FLOORS, VAULT_DEPTH } from '../gen/floorgen.js';
 
 export function makeHero(world: World, rng: Rng, level = 1): Hero {
   const species = rng.pick(SPECIES);

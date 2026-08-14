@@ -2,6 +2,7 @@ import { RngDomain, mix32, rngFor, type Rng } from '@donjon/shared';
 import { buildApsp } from './apsp.js';
 import {
   TILE_DOOR,
+  TILE_EXIT,
   TILE_FLOOR,
   TILE_HEARTH,
   TILE_RUBBLE,
@@ -41,6 +42,8 @@ const HEARTH_NAMES = [
 
 export const FLOOR_WIDTH = 60;
 export const FLOOR_HEIGHT = 40;
+export const MAX_FLOORS = 10;
+export const VAULT_DEPTH = MAX_FLOORS + 1;
 
 const ROOM_ADJECTIVES = [
   'Dripping',
@@ -127,7 +130,66 @@ export function corridorHorizontalFirst(from: number, to: number): boolean {
   return from === lo ? canonical : !canonical;
 }
 
+function generateVault(depth: number, tick: number): Floor {
+  const tiles = new Uint8Array(FLOOR_WIDTH * FLOOR_HEIGHT).fill(TILE_WALL);
+  const w = 30;
+  const h = 18;
+  const x = (FLOOR_WIDTH - w) >> 1;
+  const y = (FLOOR_HEIGHT - h) >> 1;
+  carveRect(tiles, { x, y, w, h });
+
+  const room: Room = {
+    id: depth * 1000 + 1,
+    floorId: depth,
+    idx: 0,
+    name: 'The Vault',
+    x,
+    y,
+    w,
+    h,
+    cx: x + (w >> 1),
+    cy: y + (h >> 1),
+    state: 'stocked',
+    lootCp: 0,
+    trapTier: 0,
+    trapState: 'none',
+    restockDueTick: 0,
+    visits: 0,
+    deaths: 0,
+  };
+
+  tiles[room.cy * FLOOR_WIDTH + x] = TILE_DOOR;
+  tiles[room.cy * FLOOR_WIDTH + (x + w - 1)] = TILE_EXIT;
+
+  const apsp = buildApsp([[]]);
+  return {
+    id: depth,
+    depth,
+    name: 'The Vault',
+    width: FLOOR_WIDTH,
+    height: FLOOR_HEIGHT,
+    tiles,
+    rooms: [room],
+    adjacency: [[]],
+    nextHop: apsp.nextHop,
+    dist: apsp.dist,
+    entryRoom: 0,
+    stairsRoom: 0,
+    hearthRoom: -1,
+    shopRoom: -1,
+    dangerCr: 1 + Math.round(1.3 * (depth - 1) * 10) / 10,
+    generatedTick: tick,
+  };
+}
+
+export function vaultExitSpot(floor: Floor): [number, number] {
+  const room = floor.rooms[0];
+  if (!room) return [1, 1];
+  return [room.x + room.w - 1, room.cy];
+}
+
 export function generateFloor(worldSeed: number, depth: number, tick: number): Floor {
+  if (depth === VAULT_DEPTH) return generateVault(depth, tick);
   const rng = rngFor(worldSeed, depth, RngDomain.FLOORGEN, depth);
   const tiles = new Uint8Array(FLOOR_WIDTH * FLOOR_HEIGHT).fill(TILE_WALL);
 

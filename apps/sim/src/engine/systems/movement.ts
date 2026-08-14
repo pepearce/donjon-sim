@@ -1,8 +1,9 @@
 import { RngDomain, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { nextRoomTowards } from '../../gen/apsp.js';
-import { generateFloor, roomSpot, tilePath, walkWithin } from '../../gen/floorgen.js';
-import { MAX_FLOORS, floorOf, livingRoster, monstersIn } from '../world.js';
+import { generateFloor, roomSpot, tilePath, vaultExitSpot, walkWithin } from '../../gen/floorgen.js';
+import { VAULT_DEPTH, floorOf, livingRoster, monstersIn } from '../world.js';
+import { returnToTavern } from './apex.js';
 import { startCombat } from './combat.js';
 import { doctrineFor, roomNoise } from './doctrine.js';
 import { traitFrac } from './traits.js';
@@ -135,6 +136,7 @@ function onArrival(world: World, team: Team, floor: Floor): void {
   resolveTrap(world, team, room);
 
   if (monstersIn(world, floor.id, team.roomIdx).length > 0) {
+    if (floor.depth === VAULT_DEPTH && team.homeboundTick !== null) return;
     startCombat(world, team);
     return;
   }
@@ -148,7 +150,7 @@ export function descend(world: World, team: Team, floor: Floor): void {
   const nextDepth = floor.depth + 1;
   let next = floorOf(world, nextDepth);
 
-  if (!next && nextDepth <= MAX_FLOORS) {
+  if (!next && nextDepth <= VAULT_DEPTH) {
     next = generateFloor(world.seed, nextDepth, world.tick);
     world.floors.push(next);
     stockFloor(world, next.id);
@@ -190,6 +192,30 @@ export function descend(world: World, team: Team, floor: Floor): void {
     floorId: next.id,
     payload: { team: team.name, depth: nextDepth, floor: next.name },
   });
+}
+
+export function exitVault(world: World, team: Team, floor: Floor): void {
+  const [ex, ey] = vaultExitSpot(floor);
+  if (team.tileX === ex && team.tileY === ey) {
+    bankLoot(world, team);
+    returnToTavern(world, team);
+    return;
+  }
+  if (team.pathPos >= team.path.length) {
+    team.path = walkWithin(floor, [team.tileX, team.tileY], [ex, ey]);
+    team.pathPos = 0;
+    team.targetRoom = team.roomIdx;
+  }
+  const next = team.path[team.pathPos];
+  if (next) {
+    team.tileX = next[0];
+    team.tileY = next[1];
+    team.pathPos += 1;
+    markSeen(team, floor, team.tileX, team.tileY);
+    team.trail.push([team.tileX, team.tileY]);
+    if (team.trail.length > 64) team.trail.shift();
+  }
+  team.commitUntilTick = world.tick;
 }
 
 export function ascend(world: World, team: Team, floor: Floor): void {

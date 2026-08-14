@@ -133,7 +133,7 @@ export function resolveRestock(world: World, roomId: number): void {
   for (const floor of world.floors) {
     const room = floor.rooms.find((r) => r.id === roomId);
     if (!room) continue;
-    if (floor.depth > RESTOCK.shopfrontDepth && payrollCp(world) > hiringBudgetCp(world)) {
+    if (!isApexRoom(floor, room) && floor.depth > RESTOCK.shopfrontDepth && payrollCp(world) > hiringBudgetCp(world)) {
       scheduleRestock(world, floor, room);
       return;
     }
@@ -153,7 +153,7 @@ export function stockFloor(world: World, floorId: number): void {
   const floor = floorOf(world, floorId);
   if (!floor) return;
   for (const room of floor.rooms) {
-    if (room.idx === floor.entryRoom || room.idx === floor.shopRoom) {
+    if ((room.idx === floor.entryRoom || room.idx === floor.shopRoom) && !isApexRoom(floor, room)) {
       room.state = 'cleared';
       continue;
     }

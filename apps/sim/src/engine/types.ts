@@ -18,6 +18,7 @@ export const TILE_STAIRS = 3;
 export const TILE_RUBBLE = 4;
 export const TILE_HEARTH = 5;
 export const TILE_SHOP = 6;
+export const TILE_EXIT = 7;
 
 export function isWalkable(
   floor: { width: number; height: number; tiles: Uint8Array },

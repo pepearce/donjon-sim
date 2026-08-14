@@ -7,7 +7,7 @@ import { stockFloor } from '../src/engine/systems/restock.js';
 import { livingHeroCount } from '../src/engine/systems/recruit.js';
 import { chooseAction } from '../src/engine/systems/teamAi.js';
 import { step } from '../src/engine/step.js';
-import { MAX_FLOORS, circulatingCoin, livingRoster, roster } from '../src/engine/world.js';
+import { VAULT_DEPTH, circulatingCoin, livingRoster, roster } from '../src/engine/world.js';
 import type { Monster, World } from '../src/engine/types.js';
 
 const SEED = 0xa9e7;
@@ -16,8 +16,8 @@ function identity(world: World): number {
   return circulatingCoin(world) + world.dungeon.sinkCp - world.dungeon.mintedCp;
 }
 
-function withFloorTen(world: World): void {
-  for (let depth = world.floors.length + 1; depth <= MAX_FLOORS; depth++) {
+function withVault(world: World): void {
+  for (let depth = world.floors.length + 1; depth <= VAULT_DEPTH; depth++) {
     world.floors.push(generateFloor(world.seed, depth, world.tick));
   }
 }
@@ -27,45 +27,47 @@ function findApex(world: World): Monster | undefined {
 }
 
 describe('apex boss', () => {
-  it('stocks a single apex boss in the deepest stairs room', () => {
+  it('stocks a single apex boss in the vault', () => {
     const world = newWorld(SEED);
-    withFloorTen(world);
-    const ten = world.floors[MAX_FLOORS - 1]!;
-    stockFloor(world, ten.id);
+    withVault(world);
+    const vault = world.floors[VAULT_DEPTH - 1]!;
+    stockFloor(world, vault.id);
 
     const boss = findApex(world);
     expect(boss).toBeDefined();
     expect(boss!.guardian).toBe(true);
-    expect(boss!.floorId).toBe(ten.id);
-    expect(boss!.roomId).toBe(ten.rooms[ten.stairsRoom]!.id);
-    expect(boss!.cr).toBeCloseTo(ten.dangerCr * APEX.crMult, 5);
+    expect(boss!.floorId).toBe(vault.id);
+    expect(boss!.roomId).toBe(vault.rooms[vault.stairsRoom]!.id);
+    expect(boss!.cr).toBeCloseTo(vault.dangerCr * APEX.crMult, 5);
     expect(world.monsters.filter((m) => m.apex).length).toBe(1);
     expect(world.pendingEvents.some((e) => e.type === 'APEX_SUMMONED')).toBe(true);
   });
 
-  it('marks only the deepest stairs room as the apex room', () => {
+  it('marks only the vault as the apex room', () => {
     const world = newWorld(SEED);
-    withFloorTen(world);
+    withVault(world);
     const one = world.floors[0]!;
-    const ten = world.floors[MAX_FLOORS - 1]!;
+    const ten = world.floors[VAULT_DEPTH - 2]!;
+    const vault = world.floors[VAULT_DEPTH - 1]!;
     expect(isApexRoom(one, one.rooms[one.stairsRoom]!)).toBe(false);
-    expect(isApexRoom(ten, ten.rooms[ten.stairsRoom]!)).toBe(true);
-    expect(isApexRoom(ten, ten.rooms[ten.entryRoom]!)).toBe(false);
+    expect(isApexRoom(ten, ten.rooms[ten.stairsRoom]!)).toBe(false);
+    expect(isApexRoom(vault, vault.rooms[vault.stairsRoom]!)).toBe(true);
+    expect(vault.rooms.length).toBe(1);
   });
 });
 
 describe('triumph', () => {
   function setupTriumph(world: World): { boss: Monster } {
-    withFloorTen(world);
-    const ten = world.floors[MAX_FLOORS - 1]!;
-    stockFloor(world, ten.id);
+    withVault(world);
+    const vault = world.floors[VAULT_DEPTH - 1]!;
+    stockFloor(world, vault.id);
     const boss = findApex(world)!;
     boss.alive = false;
     boss.hp = 0;
     return { boss };
   }
 
-  it('advances the epoch, pays the hoard, and schedules the respawn', () => {
+  it('advances the epoch, pays the hoard, and schedules the rehire', () => {
     const world = newWorld(SEED);
     const { boss } = setupTriumph(world);
     const team = world.teams[0]!;
@@ -82,8 +84,8 @@ describe('triumph', () => {
     expect(identity(world)).toBe(before);
     expect(world.pendingEvents.some((e) => e.type === 'TRIUMPH')).toBe(true);
 
-    const bossRoom = world.floors[MAX_FLOORS - 1]!.rooms.find((r) => r.id === boss.roomId)!;
-    expect(bossRoom.restockDueTick).toBe(world.tick + APEX.respawnDays * DAY_TICKS);
+    const bossRoom = world.floors[VAULT_DEPTH - 1]!.rooms.find((r) => r.id === boss.roomId)!;
+    expect(bossRoom.restockDueTick).toBe(world.tick + 1);
     const wakes = world.scheduler.toArray();
     expect(wakes.some((w) => w.kind === 'RESTOCK' && w.entityId === bossRoom.id)).toBe(true);
   });
@@ -127,9 +129,9 @@ describe('triumphant homecoming', () => {
 
   it('sets the team homebound when survivors remain after a triumph', () => {
     const world = newWorld(SEED);
-    withFloorTen(world);
-    const ten = world.floors[MAX_FLOORS - 1]!;
-    stockFloor(world, ten.id);
+    withVault(world);
+    const vault = world.floors[VAULT_DEPTH - 1]!;
+    stockFloor(world, vault.id);
     const boss = findApex(world)!;
     boss.alive = false;
     const team = world.teams[0]!;
@@ -193,15 +195,15 @@ describe('triumphant homecoming', () => {
 describe('epoch ramp', () => {
   it('scales deep floors hard and shallow floors barely', () => {
     const world = newWorld(SEED);
-    withFloorTen(world);
+    withVault(world);
     const one = world.floors[0]!;
-    const ten = world.floors[MAX_FLOORS - 1]!;
+    const vault = world.floors[VAULT_DEPTH - 1]!;
 
-    expect(effectiveDangerCr(world, ten)).toBeCloseTo(ten.dangerCr, 5);
+    expect(effectiveDangerCr(world, vault)).toBeCloseTo(vault.dangerCr, 5);
 
     world.dungeon.apexEpoch = 3;
     const shallowRatio = effectiveDangerCr(world, one) / one.dangerCr;
-    const deepRatio = effectiveDangerCr(world, ten) / ten.dangerCr;
+    const deepRatio = effectiveDangerCr(world, vault) / vault.dangerCr;
     expect(deepRatio).toBeCloseTo(1 + APEX.rampPerEpoch * 3, 5);
     expect(shallowRatio).toBeLessThan(1.01);
     expect(deepRatio).toBeGreaterThan(shallowRatio);

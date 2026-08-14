@@ -1,6 +1,6 @@
 import { DAY_TICKS, RngDomain, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
-import { MAX_FLOORS, floorOf, livingRoster, roster } from '../world.js';
+import { VAULT_DEPTH, floorOf, livingRoster, roster } from '../world.js';
 import { adjustKhanStanding } from './standing.js';
 import { awardEpithet } from './epithets.js';
 import { makeItem } from './loot.js';
@@ -10,7 +10,6 @@ export const APEX = defineTunables('apex', {
   crMult: { default: 1.6, min: 1, max: 10, step: 0.1, label: 'Apex CR multiplier' },
   hoardCp: { default: 6000, min: 0, max: 1_000_000, label: 'Apex hoard (cp)' },
   hoardRolls: { default: 2, min: 0, max: 10, label: 'Apex hoard item rolls' },
-  respawnDays: { default: 2, min: 0, max: 100, label: 'Apex respawn (days)' },
   rampPerEpoch: { default: 0.12, min: 0, max: 2, step: 0.01, label: 'Epoch CR ramp' },
   depthExponent: { default: 2, min: 0, max: 6, step: 0.1, label: 'Epoch ramp depth exponent' },
   decayDays: { default: 6, min: 1, max: 365, label: 'Epoch decay after (days)' },
@@ -20,12 +19,12 @@ export const APEX = defineTunables('apex', {
 
 export function effectiveDangerCr(world: World, floor: Floor): number {
   const ramp =
-    APEX.rampPerEpoch * world.dungeon.apexEpoch * (floor.depth / MAX_FLOORS) ** APEX.depthExponent;
+    APEX.rampPerEpoch * world.dungeon.apexEpoch * (floor.depth / VAULT_DEPTH) ** APEX.depthExponent;
   return floor.dangerCr * (1 + ramp);
 }
 
 export function isApexRoom(floor: Floor, room: Room): boolean {
-  return floor.depth === MAX_FLOORS && room.idx === floor.stairsRoom;
+  return floor.depth === VAULT_DEPTH && room.idx === floor.stairsRoom;
 }
 
 function retireChance(hero: Hero): number {
@@ -65,11 +64,11 @@ function rollRetirements(world: World, team: Team): void {
   }
 }
 
-function scheduleApexRespawn(world: World, boss: Monster): void {
+function scheduleApexRehire(world: World, boss: Monster): void {
   const floor = floorOf(world, boss.floorId);
   const room = floor?.rooms.find((r) => r.id === boss.roomId);
   if (!room) return;
-  const due = world.tick + APEX.respawnDays * DAY_TICKS;
+  const due = world.tick + 1;
   room.restockDueTick = due;
   world.scheduler.schedule(due, 'RESTOCK', room.id);
 }
@@ -87,7 +86,7 @@ export function triumph(world: World, team: Team, slayer: Hero, boss: Monster): 
 
   let itemValue = 0;
   for (let i = 0; i < APEX.hoardRolls; i++) {
-    const item = makeItem(world, MAX_FLOORS, null);
+    const item = makeItem(world, VAULT_DEPTH, null);
     item.ownerTeamId = team.id;
     item.ownerHeroId = slayer.id;
     slayer.items.push(item.id);
@@ -121,17 +120,17 @@ export function triumph(world: World, team: Team, slayer: Hero, boss: Monster): 
       monster: boss.name,
       cp: hoard + itemValue,
       epoch: d.apexEpoch,
-      depth: MAX_FLOORS,
+      depth: VAULT_DEPTH,
     },
   });
 
-  scheduleApexRespawn(world, boss);
+  scheduleApexRehire(world, boss);
   rollRetirements(world, team);
 
   if (roster(world, team).length > 0) {
     team.homeboundTick = world.tick;
     team.lastAction = 'RETREAT';
-    team.commitUntilTick = world.tick + 300;
+    team.commitUntilTick = world.tick;
   }
 }
 

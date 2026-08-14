@@ -8,6 +8,7 @@ export const TILE_STAIRS = 3;
 export const TILE_RUBBLE = 4;
 export const TILE_HEARTH = 5;
 export const TILE_SHOP = 6;
+export const TILE_EXIT = 7;
 
 export const CACHE_TILE = 24;
 const ROCK_DEPTH = 3;
@@ -119,6 +120,22 @@ function paintFloorTile(ctx: CanvasRenderingContext2D, x: number, y: number, til
     for (let s = 1; s < 4; s++) {
       ctx.fillRect(px + 2, py + (CACHE_TILE / 4) * s, CACHE_TILE - 4, 1.5);
     }
+    return;
+  }
+
+  if (tile === TILE_EXIT) {
+    ctx.fillStyle = 'rgba(20, 16, 10, 0.95)';
+    ctx.fillRect(px + 3, py + 3, CACHE_TILE - 6, CACHE_TILE - 6);
+    ctx.strokeStyle = 'rgba(230, 190, 90, 0.95)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py + CACHE_TILE - 4);
+    ctx.lineTo(px + 4, py + CACHE_TILE * 0.38);
+    ctx.arc(px + CACHE_TILE / 2, py + CACHE_TILE * 0.38, CACHE_TILE / 2 - 4, Math.PI, 0);
+    ctx.lineTo(px + CACHE_TILE - 4, py + CACHE_TILE - 4);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 224, 130, 0.35)';
+    ctx.fillRect(px + CACHE_TILE / 2 - 2, py + CACHE_TILE * 0.3, 4, CACHE_TILE * 0.55);
     return;
   }
 
