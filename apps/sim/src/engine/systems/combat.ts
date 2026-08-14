@@ -184,6 +184,24 @@ function pretreAid(world: World, team: Team, hero: Hero): boolean {
   return true;
 }
 
+export function startCombat(world: World, team: Team): void {
+  const floor = floorOf(world, team.floorId);
+  const room = floor?.rooms[team.roomIdx];
+  if (!floor || !room) return;
+  const enemies = monstersIn(world, floor.id, team.roomIdx);
+  if (enemies.length === 0) return;
+
+  team.state = 'fighting';
+  emit(world, {
+    type: 'COMBAT_START',
+    teamId: team.id,
+    floorId: floor.id,
+    roomId: room.id,
+    payload: { room: room.name, enemies: enemies.length, lead: enemies[0]?.name ?? 'something' },
+  });
+  sapperCharge(world, team);
+}
+
 export function sapperCharge(world: World, team: Team): void {
   const sappers = livingRoster(world, team).filter((h) => h.className === 'sapper');
   for (const sapper of sappers) {

@@ -3,7 +3,7 @@ import { emit } from '../emit.js';
 import { nextRoomTowards } from '../../gen/apsp.js';
 import { generateFloor, roomSpot, tilePath, walkWithin } from '../../gen/floorgen.js';
 import { MAX_FLOORS, floorOf, livingRoster, monstersIn } from '../world.js';
-import { sapperCharge } from './combat.js';
+import { startCombat } from './combat.js';
 import { doctrineFor, roomNoise } from './doctrine.js';
 import { traitFrac } from './traits.js';
 import { resolveTrap } from './traps.js';
@@ -134,17 +134,8 @@ function onArrival(world: World, team: Team, floor: Floor): void {
 
   resolveTrap(world, team, room);
 
-  const enemies = monstersIn(world, floor.id, team.roomIdx);
-  if (enemies.length > 0) {
-    team.state = 'fighting';
-    emit(world, {
-      type: 'COMBAT_START',
-      teamId: team.id,
-      floorId: floor.id,
-      roomId: room.id,
-      payload: { room: room.name, enemies: enemies.length, lead: enemies[0]?.name ?? 'something' },
-    });
-    sapperCharge(world, team);
+  if (monstersIn(world, floor.id, team.roomIdx).length > 0) {
+    startCombat(world, team);
     return;
   }
 

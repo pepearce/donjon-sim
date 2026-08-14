@@ -1,7 +1,7 @@
 import { DAY_TICKS, DECAY_EVERY } from '@donjon/shared';
 import { emit } from './emit.js';
 import { apexDecayDaily, returnToTavern } from './systems/apex.js';
-import { attemptStabilise, resolveCombatRound } from './systems/combat.js';
+import { attemptStabilise, resolveCombatRound, startCombat } from './systems/combat.js';
 import { resolveBleedOut, sweepCorpse } from './systems/death.js';
 import { bankLoot, canCamp, dailyUpkeep, payEntryFee, restAndHeal } from './systems/economy.js';
 import {
@@ -177,12 +177,22 @@ export function step(world: World): void {
   for (const team of active) {
     if (team.state !== 'fighting') continue;
     attemptStabilise(world, team);
+    if (chooseAction(world, team) === 'FLEE') {
+      team.state = 'fleeing';
+      team.commitUntilTick = world.tick;
+      continue;
+    }
     resolveCombatRound(world, team);
   }
 
   for (const team of active) {
     if (team.state === 'fighting') continue;
     if (livingRoster(world, team).length === 0) continue;
+
+    if (team.state !== 'fleeing' && monstersIn(world, team.floorId, team.roomIdx).length > 0) {
+      startCombat(world, team);
+      continue;
+    }
 
     if (team.state === 'resting' && world.tick < team.restUntilTick) {
       restAndHeal(world, team);
