@@ -95,6 +95,8 @@ export class SimStore {
       this.fog = null;
       this.sight = [];
       this.fogTiles = {};
+      this.ticker = [];
+      this.maxEventId = 0;
     }
     if (snap.epoch) this.epoch = snap.epoch;
     this.tick = snap.tick;
