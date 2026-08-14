@@ -12,6 +12,7 @@ export interface AdminDeps {
   onSpeed(multiplier: number): void;
   onCheckpoint(): Record<string, unknown>;
   onDiag(): Record<string, unknown>;
+  onRestart(): void;
   log(message: string): void;
   onConfigList(): unknown;
   onConfigSet(key: string, value: number): unknown;
@@ -110,6 +111,12 @@ export function createAdminServer(deps: AdminDeps): Server {
     deps.onSpeed(multiplier);
     return c.json({ ok: true, speed: multiplier });
   });
+
+  app.post('/admin/restart', (c) => {
+    deps.onRestart();
+    return c.json({ ok: true, status: 'restarting' });
+  });
+  app.all('/admin/restart', (c) => fail(c, 405, 'bad_method', `${c.req.method} not allowed`));
 
   app.all('/admin/checkpoint', (c) => c.json({ ok: true, ...deps.onCheckpoint() }));
 

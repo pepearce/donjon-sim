@@ -30,6 +30,11 @@ export const POST: RequestHandler = async ({ request }) => {
       return json(await res.json());
     }
 
+    if (body.action === 'restart') {
+      const res = await fetch(`${ADMIN}/admin/restart`, { method: 'POST', headers });
+      return json(await res.json());
+    }
+
     return json({ error: { code: 'bad_action', message: 'unknown action' } }, { status: 400 });
   } catch {
     return json({ error: { code: 'admin_unreachable', message: 'the simulation admin port is not answering' } }, { status: 502 });

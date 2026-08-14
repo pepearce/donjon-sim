@@ -161,6 +161,11 @@ const admin = createAdminServer({
     mem: process.memoryUsage(),
     uptimeSec: Math.round(process.uptime()),
   }),
+  onRestart: () => {
+    adminLog.info('manual world restart requested');
+    world.foreclosed = true;
+    paused = false;
+  },
   log: (m) => adminLog.info(m),
   onConfigList: () => listTunables(),
   onConfigSet: (key, value) => saveOverride(db, key, value, 'admin', Date.now()),

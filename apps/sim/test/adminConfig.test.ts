@@ -15,6 +15,7 @@ const TOKEN = 'test-token';
 let db: Db;
 let server: Server;
 let base: string;
+let restarts = 0;
 
 beforeAll(async () => {
   db = new Database(':memory:');
@@ -27,6 +28,9 @@ beforeAll(async () => {
     onSpeed() {},
     onCheckpoint: () => ({}),
     onDiag: () => ({}),
+    onRestart: () => {
+      restarts += 1;
+    },
     log() {},
     onConfigList: () => listTunables(),
     onConfigSet: (key, value) => saveOverride(db, key, value, 'admin', 42),
@@ -126,5 +130,27 @@ describe('POST /admin/config/reset-all', () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { cleared: number }).cleared).toBeGreaterThanOrEqual(1);
     expect(T.gamma).toBe(50);
+  });
+});
+
+describe('POST /admin/restart', () => {
+  it('triggers the restart hook', async () => {
+    const before = restarts;
+    const res = await call('/admin/restart', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { status: string }).status).toBe('restarting');
+    expect(restarts).toBe(before + 1);
+  });
+
+  it('rejects non-POST methods', async () => {
+    const before = restarts;
+    const res = await call('/admin/restart', { method: 'GET' });
+    expect(res.status).toBe(405);
+    expect(restarts).toBe(before);
+  });
+
+  it('rejects a bad token', async () => {
+    const res = await call('/admin/restart', { method: 'POST' }, 'wrong');
+    expect(res.status).toBe(403);
   });
 });

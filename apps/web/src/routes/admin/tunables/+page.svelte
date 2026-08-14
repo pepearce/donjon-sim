@@ -100,6 +100,25 @@
     }
   }
 
+  let restarting = $state(false);
+
+  async function restartWorld(): Promise<void> {
+    if (!confirm('Wipe this world and forge a new one? Every hero, team, and story is lost. Tunables are kept.')) return;
+    const res = await fetch('/api/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'restart' }),
+    });
+    if (res.ok) {
+      error = '';
+      restarting = true;
+      setTimeout(() => (restarting = false), 8000);
+    } else {
+      const body = await res.json();
+      error = body?.error?.message ?? 'restart failed';
+    }
+  }
+
   async function resetAll(): Promise<void> {
     if (!confirm('Reset every tunable to its code default?')) return;
     const res = await fetch('/api/tunables', {
@@ -148,8 +167,21 @@
       >
         RESET ALL
       </button>
+      <button
+        type="button"
+        class="rounded-sm border-2 border-blood-500 bg-sev-3-wash px-3 py-1.5 font-mono text-micro text-blood-300 hover:bg-blood-500/25"
+        onclick={restartWorld}
+      >
+        RESTART WORLD
+      </button>
     </div>
   </header>
+
+  {#if restarting}
+    <p class="mt-4 rounded-sm border-2 border-torch-400 bg-sev-2-wash px-3 py-2 text-body-sm text-torch-300" role="status">
+      The world is being reforged — a fresh dungeon rises within a few seconds.
+    </p>
+  {/if}
 
   {#if error}
     <p class="mt-4 rounded-sm border-2 border-blood-500 bg-sev-3-wash px-3 py-2 text-body-sm text-blood-300" role="status">
