@@ -122,6 +122,7 @@ export interface MonsterPublic {
   hp: number;
   hpMax: number;
   guardian: boolean;
+  apex: boolean;
 }
 
 export interface EventDTO {

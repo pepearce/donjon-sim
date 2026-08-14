@@ -9,7 +9,7 @@ import { doctrineFor, roomNoise } from './doctrine.js';
 import { traitFrac } from './traits.js';
 import { resolveTrap } from './traps.js';
 import { scheduleRestock, stockFloor } from './restock.js';
-import { bankLoot, payEntryFee } from './economy.js';
+import { bankLoot, canCamp, payEntryFee, restAndHeal } from './economy.js';
 import { awardEpithet } from './epithets.js';
 import { setRecord } from './records.js';
 import { clamp, exploredKey, isWalkable, pickWeighted, pushHistory, type Floor, type Team, type World } from '../types.js';
@@ -161,6 +161,28 @@ function onArrival(world: World, team: Team, floor: Floor): void {
 
 export function descend(world: World, team: Team, floor: Floor): void {
   const nextDepth = floor.depth + 1;
+
+  if (nextDepth === VAULT_DEPTH) {
+    const hurt = livingRoster(world, team).some((h) => h.hp < h.hpMax);
+    if (hurt) {
+      if (canCamp(world, team)) {
+        team.state = 'resting';
+        team.restUntilTick = world.tick + 30;
+        restAndHeal(world, team);
+        return;
+      }
+      const hearthDist =
+        floor.hearthRoom >= 0
+          ? (floor.dist[team.roomIdx * floor.rooms.length + floor.hearthRoom] ?? 255)
+          : 255;
+      if (hearthDist < 255) {
+        team.lastAction = 'REST';
+        team.commitUntilTick = world.tick + 60;
+        return;
+      }
+    }
+  }
+
   let next = floorOf(world, nextDepth);
 
   if (!next && nextDepth <= VAULT_DEPTH) {
@@ -174,9 +196,12 @@ export function descend(world: World, team: Team, floor: Floor): void {
   team.roomIdx = next.entryRoom;
   team.targetRoom = next.entryRoom;
   const entry = next.rooms[next.entryRoom];
-  const entrySpot = roomSpot(next, next.entryRoom, team.id, world.seed);
-  team.tileX = entry ? entrySpot[0] : 1;
-  team.tileY = entry ? entrySpot[1] : 1;
+  const entrySpot =
+    nextDepth === VAULT_DEPTH && entry
+      ? [entry.x, entry.cy]
+      : roomSpot(next, next.entryRoom, team.id, world.seed);
+  team.tileX = entry ? entrySpot[0]! : 1;
+  team.tileY = entry ? entrySpot[1]! : 1;
   clearPath(team);
   team.trail.length = 0;
   team.lastAction = 'EXPLORE';

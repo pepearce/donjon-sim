@@ -558,20 +558,28 @@ export class MapRenderer {
       if (mx < -tilePx || my < -tilePx || mx > cw + tilePx || my > ch + tilePx) continue;
 
       const power = Math.min(1, Math.max(0, monster.cr) / 8);
-      const r = Math.max(1.5, radius * (monster.guardian ? 0.95 : 0.5 + power * 0.4));
-      const base = monster.guardian ? FX_PALETTE.guardian : FX_PALETTE.monster;
+      const r = Math.max(1.5, radius * (monster.apex ? 2.4 : monster.guardian ? 0.95 : 0.5 + power * 0.4));
+      const base = monster.guardian || monster.apex ? FX_PALETTE.guardian : FX_PALETTE.monster;
       const fill = mixColor(MAP_PALETTE.wallInk, base, 0.45 + power * 0.55);
 
-      if (monster.guardian) {
+      if (monster.guardian || monster.apex) {
         const pulse = this.reduced ? 0.5 : 0.5 + 0.35 * Math.sin(now / 520);
         ctx.strokeStyle = withAlpha(FX_PALETTE.guardian, 0.2 + pulse * 0.4);
-        ctx.lineWidth = Math.max(1, strokeW);
+        ctx.lineWidth = Math.max(1, strokeW * (monster.apex ? 1.6 : 1));
         ctx.beginPath();
         ctx.arc(mx, my, r * 1.65, 0, Math.PI * 2);
         ctx.stroke();
+        if (monster.apex) {
+          ctx.strokeStyle = withAlpha(FX_PALETTE.guardian, 0.12 + pulse * 0.25);
+          ctx.beginPath();
+          ctx.arc(mx, my, r * 2.05, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        const spikes = monster.apex ? 8 : 4;
+        ctx.strokeStyle = withAlpha(FX_PALETTE.guardian, 0.2 + pulse * 0.4);
         ctx.beginPath();
-        for (let s = 0; s < 4; s++) {
-          const a = (Math.PI / 2) * s + Math.PI / 4;
+        for (let s = 0; s < spikes; s++) {
+          const a = ((Math.PI * 2) / spikes) * s + Math.PI / 4;
           ctx.moveTo(mx + Math.cos(a) * r * 1.2, my + Math.sin(a) * r * 1.2);
           ctx.lineTo(mx + Math.cos(a) * r * 1.9, my + Math.sin(a) * r * 1.9);
         }
@@ -605,9 +613,9 @@ export class MapRenderer {
         ctx.fillText(String(Math.round(monster.cr)), mx, my + 0.5);
       }
 
-      if (monster.guardian && tilePx >= 20) {
-        const size = Math.max(9, tilePx * 0.42);
-        const ly = my - r * 2.1;
+      if ((monster.guardian && tilePx >= 20) || (monster.apex && tilePx >= 10)) {
+        const size = Math.max(9, tilePx * (monster.apex ? 0.6 : 0.42));
+        const ly = my - r * (monster.apex ? 1.6 : 2.1);
         ctx.font = `600 ${Math.round(size)}px ${MONO}`;
         ctx.lineWidth = Math.max(2, tilePx * 0.12);
         ctx.lineJoin = 'round';

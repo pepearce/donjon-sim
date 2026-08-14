@@ -200,7 +200,7 @@ export function chooseAction(world: World, team: Team): Action {
 
   const ctx = buildContext(world, team, floor);
 
-  if (team.homeboundTick !== null && !ctx.inCombat) {
+  if (team.homeboundTick !== null && team.state !== 'fighting') {
     if (ctx.worstHpFrac < 0.35 && ctx.canRestHere) return 'REST';
     return 'RETREAT';
   }
@@ -233,6 +233,7 @@ export function chooseAction(world: World, team: Team): Action {
   }
   const best: Action = ORDER[bestOrdinal] ?? 'EXPLORE';
 
+  if (best === 'FLEE' && floor.depth === VAULT_DEPTH) return 'EXPLORE';
   if (best === 'REST' && livingRoster(world, team).length === 0) return 'RETREAT';
   return best;
 }

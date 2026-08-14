@@ -428,6 +428,7 @@ export function projectMonsters(world: World): MonsterPublic[] {
       hp: Math.round(m.hp),
       hpMax: Math.round(m.hpMax),
       guardian: m.guardian,
+      apex: m.apex,
     });
   }
   return out;

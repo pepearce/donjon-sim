@@ -32,11 +32,10 @@ function stockApex(world: World, floor: Floor, room: Room): void {
   const pool = MONSTERS.filter((m) => m.guardian);
   const archetype = pool[pool.length - 1] ?? rng.pick(MONSTERS);
   const cr = Math.max(1, effectiveDangerCr(world, floor) * APEX.crMult);
-  const boss = monsterFromCr(world, archetype.name, cr, room.id, floor.id, true, true);
+  const titled = rng.pick(APEX_NAMES);
+  const boss = monsterFromCr(world, titled.name, cr, room.id, floor.id, true, true);
   world.monsters.push(boss);
 
-  const nameRng = rngFor(world.seed, world.tick, RngDomain.MONSTER_PICK, boss.id);
-  const titled = nameRng.pick(APEX_NAMES);
   emit(world, {
     type: 'APEX_SUMMONED',
     floorId: floor.id,
@@ -44,7 +43,7 @@ function stockApex(world: World, floor: Floor, room: Room): void {
     payload: {
       monster: titled.name,
       title: titled.title,
-      archetype: boss.name,
+      archetype: archetype.name,
       depth: floor.depth,
       floor: floor.name,
       cr: Math.round(cr * 10) / 10,

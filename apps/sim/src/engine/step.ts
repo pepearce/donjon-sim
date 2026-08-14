@@ -193,8 +193,15 @@ export function step(world: World): void {
     if (team.state === 'fighting') continue;
     if (livingRoster(world, team).length === 0) continue;
 
-    const passingVault = team.homeboundTick !== null && floorOf(world, team.floorId)?.depth === VAULT_DEPTH;
-    if (team.state !== 'fleeing' && !passingVault && monstersIn(world, team.floorId, team.roomIdx).length > 0) {
+    const teamFloor = floorOf(world, team.floorId);
+    const inVault = teamFloor?.depth === VAULT_DEPTH;
+    const passingVault = team.homeboundTick !== null && inVault;
+    let engage = team.state !== 'fleeing' && !passingVault && monstersIn(world, team.floorId, team.roomIdx).length > 0;
+    if (engage && inVault && teamFloor) {
+      const arena = teamFloor.rooms[0];
+      if (arena) engage = Math.abs(team.tileX - arena.cx) + Math.abs(team.tileY - arena.cy) <= 2;
+    }
+    if (engage) {
       startCombat(world, team);
       continue;
     }
