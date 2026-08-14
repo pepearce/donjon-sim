@@ -265,11 +265,32 @@ function downHero(world: World, hero: Hero, team: Team, source: string): void {
   });
 }
 
+function endCombat(world: World, team: Team): void {
+  const floor = world.floors.find((f) => f.id === team.floorId);
+  const room = floor?.rooms[team.roomIdx];
+  if (room && room.state === 'stocked') {
+    room.state = 'cleared';
+    dropLoot(world, team, room);
+    const survivors = livingRoster(world, team);
+    linkAllPairs(world, survivors, 2);
+    team.morale = clamp(0, 100, team.morale + 6 + 2 * traitCount(survivors, 'superstitious'));
+    team.renownMilli += Math.round(8 * (floor?.depth ?? 1) * 1000);
+    emit(world, {
+      type: 'ROOM_CLEARED',
+      teamId: team.id,
+      floorId: team.floorId,
+      roomId: room.id,
+      payload: { room: room.name },
+    });
+  }
+  team.state = 'delving';
+  emit(world, { type: 'COMBAT_END', teamId: team.id, floorId: team.floorId, payload: {} });
+}
+
 export function resolveCombatRound(world: World, team: Team): void {
   const enemies = monstersIn(world, team.floorId, team.roomIdx);
   if (enemies.length === 0) {
-    team.state = 'delving';
-    emit(world, { type: 'COMBAT_END', teamId: team.id, floorId: team.floorId, payload: {} });
+    endCombat(world, team);
     return;
   }
 
@@ -426,27 +447,7 @@ export function resolveCombatRound(world: World, team: Team): void {
   });
 
   const remaining = monstersIn(world, team.floorId, team.roomIdx);
-  if (remaining.length === 0) {
-    const floor = world.floors.find((f) => f.id === team.floorId);
-    const room = floor?.rooms[team.roomIdx];
-    if (room && room.state === 'stocked') {
-      room.state = 'cleared';
-      dropLoot(world, team, room);
-      const survivors = livingRoster(world, team);
-      linkAllPairs(world, survivors, 2);
-      team.morale = clamp(0, 100, team.morale + 6 + 2 * traitCount(survivors, 'superstitious'));
-      team.renownMilli += Math.round(8 * (floor?.depth ?? 1) * 1000);
-      emit(world, {
-        type: 'ROOM_CLEARED',
-        teamId: team.id,
-        floorId: team.floorId,
-        roomId: room.id,
-        payload: { room: room.name },
-      });
-    }
-    team.state = 'delving';
-    emit(world, { type: 'COMBAT_END', teamId: team.id, floorId: team.floorId, payload: {} });
-  }
+  if (remaining.length === 0) endCombat(world, team);
 }
 
 export function attemptStabilise(world: World, team: Team): void {
