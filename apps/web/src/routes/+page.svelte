@@ -219,7 +219,7 @@
     <MapPanel />
   </div>
 
-  <div style="grid-area: ticker" class="min-h-0">
+  <div style="grid-area: ticker" class="min-h-0 overflow-hidden">
     <EventTicker />
   </div>
 

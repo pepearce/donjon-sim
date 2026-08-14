@@ -8,14 +8,19 @@
   const FILTERS = ['all', 'combat', 'loot', 'deaths', 'story', 'keeper'] as const;
   type Filter = (typeof FILTERS)[number];
 
-  const WINDOW = 90;
+  const WINDOW = 400;
   const CHAPTER_ROWS = 7;
-  const CHAPTER_ROWS_LEAD = 16;
-  const MAX_BLOCKS = 24;
+  const MAX_BLOCKS = 100;
+  const READ_SCROLL_PX = 40;
 
   let filter = $state<Filter>('all');
   let paused = $state(false);
+  let reading = $state(false);
   let frozen = $state<EventDTO[]>([]);
+  let freezeMaxId = $state(0);
+  let expanded = $state<Record<number, boolean>>({});
+  let minorsOpen = $state<Record<number, boolean>>({});
+  let logEl = $state<HTMLElement | null>(null);
 
   const baseline = sim.maxEventId;
 
@@ -184,6 +189,7 @@
     teamId: number | null;
     rows: EventDTO[];
     hidden: number;
+    minors: number;
     from: number;
     to: number;
     kills: number;
@@ -199,8 +205,10 @@
 
   type Block = Chapter | Moment;
 
+  const frozenActive = $derived(paused || reading);
+
   const blocks = $derived.by<Block[]>(() => {
-    const source = paused ? frozen : matching;
+    const source = frozenActive ? frozen : matching;
     const out: Block[] = [];
     let current: Chapter | null = null;
 
@@ -217,6 +225,7 @@
           teamId: e.teamId,
           rows: [],
           hidden: 0,
+          minors: 0,
           from: e.tick,
           to: e.tick,
           kills: 0,
@@ -232,19 +241,29 @@
       if (e.type === 'LOOT_FOUND') current.loot += 1;
     }
 
-    for (let i = 0; i < out.length; i++) {
-      const block = out[i];
-      if (!block || block.kind !== 'chapter') continue;
-      const cap = i === out.length - 1 ? CHAPTER_ROWS_LEAD : CHAPTER_ROWS;
-      if (block.rows.length > cap) {
-        block.hidden = block.rows.length - cap;
-        block.rows = block.rows.slice(-cap);
+    for (const block of out) {
+      if (block.kind !== 'chapter') continue;
+      const majors = block.rows.filter((e) => e.severity > 0);
+      const minorCount = block.rows.length - majors.length;
+      if (!minorsOpen[block.key] && majors.length > 0 && minorCount >= 2) {
+        block.minors = minorCount;
+        block.rows = majors;
+      }
+      if (!expanded[block.key] && block.rows.length > CHAPTER_ROWS) {
+        block.hidden = block.rows.length - CHAPTER_ROWS;
+        block.rows = block.rows.slice(-CHAPTER_ROWS);
       }
     }
 
     out.reverse();
     return out.slice(0, MAX_BLOCKS);
   });
+
+  const latest = $derived(matching[matching.length - 1]);
+
+  const newCount = $derived(
+    frozenActive ? matching.reduce((n, e) => (e.id > freezeMaxId ? n + 1 : n), 0) : 0,
+  );
 
   const digest = $derived(
     sim.ticker
@@ -254,14 +273,37 @@
       .join('. '),
   );
 
+  function freeze(): void {
+    frozen = matching.slice(-WINDOW);
+    freezeMaxId = matching[matching.length - 1]?.id ?? 0;
+  }
+
   function togglePause(): void {
-    if (!paused) frozen = matching.slice(-WINDOW);
+    if (!frozenActive) freeze();
     paused = !paused;
   }
 
   function setFilter(f: Filter): void {
     filter = f;
-    if (paused) frozen = matching.slice(-WINDOW);
+    if (frozenActive) freeze();
+  }
+
+  function onScroll(): void {
+    if (!logEl) return;
+    if (logEl.scrollTop > READ_SCROLL_PX) {
+      if (!reading) {
+        if (!frozenActive) freeze();
+        reading = true;
+      }
+    } else if (reading) {
+      reading = false;
+    }
+  }
+
+  function jumpToLive(): void {
+    reading = false;
+    paused = false;
+    logEl?.scrollTo({ top: 0 });
   }
 
   function select(teamId: number | null): void {
@@ -272,7 +314,7 @@
   }
 </script>
 
-<section class="ink flex min-h-0 flex-col bg-stone-900" aria-label="Event feed">
+<section class="ink relative flex h-full min-h-0 flex-col bg-stone-900" aria-label="Event feed">
   <header class="flex shrink-0 flex-wrap items-center gap-1 border-b-2 border-ink-900 px-2 py-1">
     <h2 class="shrink-0 pr-1 font-display text-display-sm leading-none text-parchment-100">
       THE FEED
@@ -318,7 +360,32 @@
     </button>
   </header>
 
-  <div class="min-h-0 flex-1 overflow-y-auto" role="log" aria-live="off">
+  {#if latest}
+    <div class="flex shrink-0 items-baseline gap-1.5 border-b border-ink-900 bg-stone-800 px-2 py-0.5">
+      <span class="shrink-0 font-mono text-micro text-torch-300">NOW</span>
+      <span aria-hidden="true" class="w-3 shrink-0 font-mono text-micro {tone(latest.type)}">{glyph(latest.type)}</span>
+      <span class="min-w-0 flex-1 truncate {rowClass(latest)}">{latest.text}</span>
+      <span class="shrink-0 font-mono text-micro text-stone-600">DAY {dayOfTick(latest.tick)}</span>
+    </div>
+  {/if}
+
+  {#if frozenActive && newCount > 0}
+    <button
+      type="button"
+      onclick={jumpToLive}
+      class="absolute left-1/2 top-16 z-20 -translate-x-1/2 rounded-full border border-torch-400 bg-stone-900 px-3 py-0.5 font-mono text-micro text-torch-300 shadow-ink-sm hover:text-torch-200"
+    >
+      ↑ {newCount} new
+    </button>
+  {/if}
+
+  <div
+    bind:this={logEl}
+    onscroll={onScroll}
+    class="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+    role="log"
+    aria-live="off"
+  >
     {#each blocks as block, i (block.key)}
       {#if block.kind === 'moment'}
         {@const hue = accent(block.e.teamId, 'var(--color-torch-400)')}
@@ -369,12 +436,11 @@
                 {teamName(block.teamId) || 'a vanished company'}
               </span>
             {/if}
+            <span class="shrink-0 font-mono text-micro text-stone-600">DAY {dayOfTick(block.to)}</span>
             {#if i === 0 && team}
               <span class="shrink-0 font-mono text-micro text-stone-500">
                 F{team.floorId} · {team.roomName}
               </span>
-            {:else}
-              <span class="shrink-0 font-mono text-micro text-stone-600">DAY {dayOfTick(block.to)}</span>
             {/if}
             <span class="ml-auto shrink-0 space-x-1.5 font-mono text-micro tabular">
               {#if block.kills > 0}<span class="text-torch-200">⚔{block.kills}</span>{/if}
@@ -384,7 +450,26 @@
           </h3>
           <ol class="px-2 py-0.5">
             {#if block.hidden > 0}
-              <li class="pl-5 font-mono text-micro text-stone-600">+{block.hidden} earlier</li>
+              <li>
+                <button
+                  type="button"
+                  onclick={() => (expanded[block.key] = true)}
+                  class="pl-5 font-mono text-micro text-stone-600 hover:text-stone-400"
+                >
+                  +{block.hidden} earlier
+                </button>
+              </li>
+            {/if}
+            {#if block.minors > 0}
+              <li>
+                <button
+                  type="button"
+                  onclick={() => (minorsOpen[block.key] = true)}
+                  class="pl-5 font-mono text-micro text-stone-600 hover:text-stone-400"
+                >
+                  · {block.minors} minor
+                </button>
+              </li>
             {/if}
             {#each block.rows as event (event.id)}
               <li class:animate-flare={i === 0 && event.id > baseline}>

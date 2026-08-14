@@ -28,7 +28,7 @@ export function useMotion(): MotionState | undefined {
 
 export type ConnectionState = 'connecting' | 'live' | 'reconnecting' | 'stale' | 'offline';
 
-export const TICKER_CAPACITY = 200;
+export const TICKER_CAPACITY = 1000;
 
 export class SimStore {
   tick = $state(0);
