@@ -64,6 +64,7 @@ export interface Hero {
   bleedOutTick: number;
   kills: number;
   scarred: boolean;
+  rezCount: number;
   bornTick: number;
   diedTick: number | null;
   diedWallMs: number | null;
@@ -229,6 +230,7 @@ export interface DungeonState {
   keeperMood: string;
   heroesSlain: number;
   corpseYieldCp: number;
+  rezYieldCp: number;
   mintedCp: number;
   sinkCp: number;
   scheme: KeeperScheme | null;

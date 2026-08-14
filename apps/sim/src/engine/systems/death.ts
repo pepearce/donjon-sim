@@ -1,11 +1,20 @@
-import { DAY_TICKS, RngDomain, applyBp, rngFor } from '@donjon/shared';
+import { DAY_TICKS, RngDomain, applyBp, defineTunables, rngFor } from '@donjon/shared';
 import { emit } from '../emit.js';
 import { floorOf, heroById, itemsOf, livingRoster, roster, teamById } from '../world.js';
 import { adjustStanding } from './dungeon.js';
 import { awardEpithet } from './epithets.js';
+import { RECRUIT } from './recruit.js';
 import { fleeGrudges, griefMultiplier } from './relations.js';
 import { traitCount } from './traits.js';
-import { clamp, pushHistory, roomTitle, type Hero, type World } from '../types.js';
+import { clamp, pushHistory, roomTitle, type Hero, type Item, type World } from '../types.js';
+
+export const REZ = defineTunables('rez', {
+  baseCp: { default: 150, min: 50, max: 100_000, label: 'Rez base fee' },
+});
+
+export function rezFee(hero: Hero): number {
+  return REZ.baseCp * hero.level * 2 ** hero.rezCount;
+}
 
 export function resolveBleedOut(world: World, heroId: number): void {
   const hero = heroById(world, heroId);
@@ -129,6 +138,11 @@ export function sweepCorpse(world: World, heroId: number): void {
   const purse = hero.goldCp;
 
   const estate = purse + salvaged;
+  const fee = rezFee(hero);
+  if (estate >= fee && world.tavern.length < RECRUIT.maxPool) {
+    rezHero(world, hero, gear, salvaged, estate, fee);
+    return;
+  }
   const tax = applyBp(estate, world.dungeon.corpseTaxBp);
   const crew = hero.teamId === null ? undefined : teamById(world, hero.teamId);
   const widowed = crew && crew.state !== 'disbanded' ? crew : undefined;
@@ -163,6 +177,54 @@ export function sweepCorpse(world: World, heroId: number): void {
       estateCp: estate,
       taxCp: recovered,
       widowCp: widowed ? widow : 0,
+    },
+  });
+}
+
+function rezHero(world: World, hero: Hero, gear: Item[], salvaged: number, estate: number, fee: number): void {
+  world.dungeon.mintedCp += salvaged;
+  world.dungeon.treasuryCp += fee;
+  world.dungeon.rezYieldCp += fee;
+  hero.goldCp = estate - fee;
+
+  for (const item of gear) {
+    item.ownerHeroId = null;
+    item.ownerTeamId = null;
+    item.roomId = null;
+    const idx = world.items.indexOf(item);
+    if (idx >= 0) world.items.splice(idx, 1);
+  }
+  hero.items = [];
+
+  const team = hero.teamId === null ? undefined : teamById(world, hero.teamId);
+  if (team) team.roster = team.roster.filter((id) => id !== hero.id);
+  hero.teamId = null;
+
+  hero.state = 'ok';
+  hero.hp = 1;
+  hero.scarred = true;
+  hero.rezCount += 1;
+  hero.diedTick = null;
+  hero.diedWallMs = null;
+
+  const rng = rngFor(world.seed, world.tick, RngDomain.REZ, hero.id);
+  if (rng.chance(0.2)) {
+    const stat = rng.pick(['str', 'agi', 'wil'] as const);
+    hero.stats[stat] = Math.max(3, hero.stats[stat] - 1);
+  }
+
+  world.tavern.push(hero.id);
+
+  emit(world, {
+    type: 'HERO_REZZED',
+    heroId: hero.id,
+    payload: {
+      hero: hero.name,
+      level: hero.level,
+      className: hero.className,
+      feeCp: fee,
+      keptCp: hero.goldCp,
+      rezCount: hero.rezCount,
     },
   });
 }

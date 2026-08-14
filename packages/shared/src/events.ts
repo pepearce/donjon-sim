@@ -55,6 +55,7 @@ export const EVENT_TYPES = [
   'TEAM_ESTATE_SEIZED',
   'APEX_SUMMONED',
   'TRIUMPH',
+  'HERO_REZZED',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -118,6 +119,7 @@ export const SEVERITY: Record<EventType, Severity> = {
   KEEPER_GAMBIT: 3,
   APEX_SUMMONED: 3,
   TRIUMPH: 3,
+  HERO_REZZED: 3,
 };
 
 export interface SimEvent {

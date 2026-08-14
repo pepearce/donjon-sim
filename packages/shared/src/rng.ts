@@ -41,6 +41,7 @@ export const RngDomain = {
   KEEPER_GAMBIT: 41,
   KEEPER_VOICE: 42,
   APEX_RETIRE: 43,
+  REZ: 44,
 } as const;
 
 export type RngDomain = (typeof RngDomain)[keyof typeof RngDomain];

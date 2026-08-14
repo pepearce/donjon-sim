@@ -24,6 +24,7 @@ function heroWith(className: string, traits: string[]): Hero {
     bleedOutTick: 0,
     kills: 0,
     scarred: false,
+    rezCount: 0,
     bornTick: 0,
     diedTick: null,
     diedWallMs: null,

@@ -4,7 +4,8 @@ import { newWorld } from '../src/engine/setup.js';
 import { KEEPER_ACTIONS } from '../src/engine/tables.js';
 import { keeperAct, keeperCost, keeperEligible, traitWeightMult } from '../src/engine/systems/keeper.js';
 import { maybeStartScheme } from '../src/engine/systems/dungeon.js';
-import { killHero, sweepCorpse } from '../src/engine/systems/death.js';
+import { killHero, rezFee, sweepCorpse } from '../src/engine/systems/death.js';
+import { RECRUIT } from '../src/engine/systems/recruit.js';
 import { circulatingCoin, livingRoster } from '../src/engine/world.js';
 import type { World } from '../src/engine/types.js';
 
@@ -171,6 +172,7 @@ describe('corpse tax', () => {
       const { world, heroId, teamId } = estateWorld();
       world.dungeon.corpseTaxBp = bp;
       heroOf(world, heroId).goldCp = 1_000;
+      heroOf(world, heroId).rezCount = 10;
       teamOf(world, teamId).carriedCp = 0;
 
       const treasuryBefore = world.dungeon.treasuryCp;
@@ -196,6 +198,7 @@ describe('corpse tax', () => {
     const { world, heroId, teamId } = estateWorld();
     world.dungeon.corpseTaxBp = 5_000;
     heroOf(world, heroId).goldCp = 800;
+    heroOf(world, heroId).rezCount = 10;
     teamOf(world, teamId).carriedCp = 0;
 
     const treasuryBefore = world.dungeon.treasuryCp;
@@ -238,6 +241,7 @@ describe('corpse tax', () => {
     const { world, heroId, teamId } = estateWorld();
     world.dungeon.corpseTaxBp = 7_500;
     heroOf(world, heroId).goldCp = 400;
+    heroOf(world, heroId).rezCount = 10;
     teamOf(world, teamId).carriedCp = 0;
 
     killHero(world, heroOf(world, heroId));
@@ -249,6 +253,72 @@ describe('corpse tax', () => {
     expect(levy?.payload['estateCp']).toBe(400);
     expect(levy?.payload['taxCp']).toBe(300);
     expect(levy?.payload['widowCp']).toBe(100);
+  });
+});
+
+describe('rez tax', () => {
+  it('rezzes a dead hero who can afford the fee back to the tavern', () => {
+    const { world, heroId, teamId } = estateWorld();
+    const hero = heroOf(world, heroId);
+    hero.goldCp = 5_000;
+    teamOf(world, teamId).carriedCp = 0;
+    const fee = rezFee(hero);
+    const treasuryBefore = world.dungeon.treasuryCp;
+
+    killHero(world, hero);
+    world.pendingEvents.length = 0;
+    sweepCorpse(world, heroId);
+
+    expect(hero.state).toBe('ok');
+    expect(hero.hp).toBe(1);
+    expect(hero.scarred).toBe(true);
+    expect(hero.rezCount).toBe(1);
+    expect(hero.teamId).toBeNull();
+    expect(hero.diedTick).toBeNull();
+    expect(world.tavern).toContain(heroId);
+    expect(teamOf(world, teamId).roster).not.toContain(heroId);
+    expect(hero.goldCp).toBe(5_000 - fee);
+    expect(world.dungeon.treasuryCp - treasuryBefore).toBe(fee);
+    expect(world.dungeon.rezYieldCp).toBe(fee);
+    expect(world.pendingEvents.some((e) => e.type === 'HERO_REZZED')).toBe(true);
+    expect(world.pendingEvents.some((e) => e.type === 'CORPSE_TAX_LEVIED')).toBe(false);
+  });
+
+  it('doubles the fee for each prior rez', () => {
+    const { world, heroId } = estateWorld();
+    const hero = heroOf(world, heroId);
+    const base = rezFee(hero);
+    hero.rezCount = 2;
+    expect(rezFee(hero)).toBe(base * 4);
+  });
+
+  it('leaves the hero dead when the tavern is full', () => {
+    const { world, heroId, teamId } = estateWorld();
+    const hero = heroOf(world, heroId);
+    hero.goldCp = 5_000;
+    teamOf(world, teamId).carriedCp = 0;
+    world.tavern = Array.from({ length: RECRUIT.maxPool }, (_, i) => 100_000 + i);
+
+    killHero(world, hero);
+    sweepCorpse(world, heroId);
+
+    expect(hero.state).toBe('dead');
+    expect(world.tavern).not.toContain(heroId);
+  });
+
+  it('conserves coin across a rez', () => {
+    const { world, heroId, teamId } = estateWorld();
+    heroOf(world, heroId).goldCp = 5_000;
+    teamOf(world, teamId).carriedCp = 320;
+    world.initialCoinCp = circulatingCoin(world);
+
+    killHero(world, heroOf(world, heroId));
+    sweepCorpse(world, heroId);
+
+    expect(heroOf(world, heroId).state).toBe('ok');
+    expect(circulatingCoin(world) + world.dungeon.sinkCp).toBe(
+      world.initialCoinCp + world.dungeon.mintedCp,
+    );
   });
 });
 

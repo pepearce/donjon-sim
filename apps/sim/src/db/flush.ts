@@ -45,16 +45,16 @@ export class Flusher {
       `),
       hero: db.prepare(`
         INSERT INTO heroes (id, name, species, class_name, primary_stat, team_id, level, xp, hp,
-          hp_max, str, agi, wil, state, bleed_out_tick, kills, scarred, born_tick, died_tick,
+          hp_max, str, agi, wil, state, bleed_out_tick, kills, scarred, rez_count, born_tick, died_tick,
           died_wall_ms, retired_tick, gold_cp, traits, epithet, nemesis_name, nemesis_downs, relations)
         VALUES (@id, @name, @species, @className, @primary, @teamId, @level, @xp, @hp,
-          @hpMax, @str, @agi, @wil, @state, @bleedOutTick, @kills, @scarred, @bornTick, @diedTick,
+          @hpMax, @str, @agi, @wil, @state, @bleedOutTick, @kills, @scarred, @rezCount, @bornTick, @diedTick,
           @diedWallMs, @retiredTick, @goldCp, @traits, @epithet, @nemesisName, @nemesisDowns, @relations)
         ON CONFLICT(id) DO UPDATE SET
           team_id = excluded.team_id, level = excluded.level, xp = excluded.xp, hp = excluded.hp,
           hp_max = excluded.hp_max, str = excluded.str, agi = excluded.agi, wil = excluded.wil,
           state = excluded.state, bleed_out_tick = excluded.bleed_out_tick, kills = excluded.kills,
-          scarred = excluded.scarred, died_tick = excluded.died_tick,
+          scarred = excluded.scarred, rez_count = excluded.rez_count, died_tick = excluded.died_tick,
           died_wall_ms = excluded.died_wall_ms, retired_tick = excluded.retired_tick,
           gold_cp = excluded.gold_cp,
           traits = excluded.traits, epithet = excluded.epithet,
@@ -100,12 +100,12 @@ export class Flusher {
       dungeon: db.prepare(`
         INSERT INTO dungeon (id, treasury_cp, loan_cp, austerity, aggression_milli,
           lethality_ema_milli, revenue_ema_cp, fame_milli, notoriety_milli, entry_fee_cp, toll_bp,
-          corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, minted_cp, sink_cp,
+          corpse_tax_bp, keeper_mood, heroes_slain, corpse_yield_cp, rez_yield_cp, minted_cp, sink_cp,
           scheme, keeper_act, records, standing, keeper_name, keeper_trait, overseer_name,
           gambit, last_gambit_ended_tick, loan_taken_tick, apex_epoch, last_triumph_tick)
         VALUES (1, @treasuryCp, @loanCp, @austerity, @aggressionMilli, @lethalityEmaMilli,
           @revenueEmaCp, @fameMilli, @notorietyMilli, @entryFeeCp, @tollBp, @corpseTaxBp,
-          @keeperMood, @heroesSlain, @corpseYieldCp, @mintedCp, @sinkCp, @scheme, @keeperAct,
+          @keeperMood, @heroesSlain, @corpseYieldCp, @rezYieldCp, @mintedCp, @sinkCp, @scheme, @keeperAct,
           @records, @standing, @keeperName, @keeperTrait, @overseerName, @gambit,
           @lastGambitEndedTick, @loanTakenTick, @apexEpoch, @lastTriumphTick)
         ON CONFLICT(id) DO UPDATE SET
@@ -116,7 +116,8 @@ export class Flusher {
           entry_fee_cp = excluded.entry_fee_cp, toll_bp = excluded.toll_bp,
           corpse_tax_bp = excluded.corpse_tax_bp,
           keeper_mood = excluded.keeper_mood, heroes_slain = excluded.heroes_slain,
-          corpse_yield_cp = excluded.corpse_yield_cp, minted_cp = excluded.minted_cp,
+          corpse_yield_cp = excluded.corpse_yield_cp, rez_yield_cp = excluded.rez_yield_cp,
+          minted_cp = excluded.minted_cp,
           sink_cp = excluded.sink_cp, scheme = excluded.scheme, keeper_act = excluded.keeper_act,
           records = excluded.records, standing = excluded.standing,
           keeper_name = excluded.keeper_name, keeper_trait = excluded.keeper_trait,
@@ -233,6 +234,7 @@ export class Flusher {
           bleedOutTick: hero.bleedOutTick,
           kills: hero.kills,
           scarred: hero.scarred ? 1 : 0,
+          rezCount: hero.rezCount,
           bornTick: hero.bornTick,
           diedTick: hero.diedTick,
           diedWallMs: hero.diedWallMs,
@@ -308,6 +310,7 @@ export class Flusher {
         keeperMood: d.keeperMood,
         heroesSlain: d.heroesSlain,
         corpseYieldCp: Math.round(d.corpseYieldCp),
+        rezYieldCp: Math.round(d.rezYieldCp),
         mintedCp: Math.round(d.mintedCp),
         sinkCp: Math.round(d.sinkCp),
         scheme: JSON.stringify(d.scheme ?? null),

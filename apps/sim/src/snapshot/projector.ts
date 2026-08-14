@@ -217,6 +217,8 @@ export function describeEvent(
       return `${STR(payload['hero'])} went down to a ${STR(payload['source'])}`;
     case 'HERO_DEATH':
       return `${STR(payload['hero'])}, level ${NUM(payload['level'])} ${STR(payload['className'])}, died`;
+    case 'HERO_REZZED':
+      return `${STR(payload['hero'])} paid the Keeper ${NUM(payload['feeCp'])}cp and walked out of the dark`;
     case 'TEAM_WIPE':
       return `${STR(payload['team'])} was wiped out on floor ${NUM(payload['floor'])}`;
     case 'TRAP_SPRUNG':

@@ -390,6 +390,17 @@ MIGRATIONS.push({
   },
 });
 
+MIGRATIONS.push({
+  version: 11,
+  name: 'rez-tax',
+  up(db) {
+    db.exec(`
+      ALTER TABLE heroes ADD COLUMN rez_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE dungeon ADD COLUMN rez_yield_cp INTEGER NOT NULL DEFAULT 0;
+    `);
+  },
+});
+
 export interface MigrateReport {
   from: number;
   to: number;
