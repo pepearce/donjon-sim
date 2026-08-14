@@ -177,7 +177,7 @@ export function step(world: World): void {
   for (const team of active) {
     if (team.state !== 'fighting') continue;
     attemptStabilise(world, team);
-    if (chooseAction(world, team) === 'FLEE') {
+    if (world.tick >= team.commitUntilTick && chooseAction(world, team) === 'FLEE') {
       team.state = 'fleeing';
       team.commitUntilTick = world.tick;
       continue;

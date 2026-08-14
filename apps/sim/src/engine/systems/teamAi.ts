@@ -165,10 +165,9 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
     50 * (ctx.carriedCp > 800 && ctx.hpFrac < 0.6 ? 1 : 0);
 
   const flee = ctx.inCombat
-    ? 20 +
-      160 * (1 - ctx.hpFrac) +
+    ? 160 * (1 - ctx.hpFrac) +
       1.2 * (45 - ctx.morale) +
-      80 * Math.max(0, ctx.threatRatio - 1) +
+      40 * Math.max(0, ctx.threatRatio - 1) +
       20 * ctx.cravenFrac -
       18 * ctx.boldFrac
     : -1e6;

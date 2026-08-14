@@ -184,6 +184,8 @@ function pretreAid(world: World, team: Team, hero: Hero): boolean {
   return true;
 }
 
+const ENGAGE_COMMIT_TICKS = 10;
+
 export function startCombat(world: World, team: Team): void {
   const floor = floorOf(world, team.floorId);
   const room = floor?.rooms[team.roomIdx];
@@ -192,6 +194,7 @@ export function startCombat(world: World, team: Team): void {
   if (enemies.length === 0) return;
 
   team.state = 'fighting';
+  team.commitUntilTick = world.tick + ENGAGE_COMMIT_TICKS;
   emit(world, {
     type: 'COMBAT_START',
     teamId: team.id,
