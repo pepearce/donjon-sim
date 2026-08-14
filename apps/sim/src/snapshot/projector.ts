@@ -250,7 +250,7 @@ export function describeEvent(
     case 'KHAN_LOAN':
       return `The Grand Khan's loan of ${NUM(payload['cp'])}cp was ${STR(payload['action'])}`;
     case 'REST':
-      return `${STR(payload['team'])} rested, ${NUM(payload['cp'])}cp of poultices`;
+      return `${STR(payload['team'])} rested by the fire, ${NUM(payload['hp'])}hp mended`;
     case 'CORPSE_TAX_LEVIED': {
       if (payload['estateCp'] === undefined) {
         return `The Keeper recovered ${NUM(payload['recoveredCp'])}cp from ${STR(payload['hero'])}`;

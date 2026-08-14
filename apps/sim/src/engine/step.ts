@@ -88,7 +88,7 @@ function applyAction(world: World, team: Team): void {
   switch (action) {
     case 'REST': {
       const safe = monstersIn(world, team.floorId, team.roomIdx).length === 0;
-      if (!safe || !(team.goldCp >= 400 || canCamp(world, team))) {
+      if (!safe || !canCamp(world, team)) {
         team.state = 'delving';
         travelTowards(world, team, floor, floor.hearthRoom);
         return;

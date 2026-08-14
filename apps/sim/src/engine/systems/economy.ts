@@ -193,33 +193,18 @@ export function canCamp(world: World, team: Team): boolean {
 }
 
 export function restAndHeal(world: World, team: Team): void {
-  const circulating = circulatingCoin(world);
-  const index = priceIndex(circulating);
   const crew = roster(world, team).filter((h) => h.state === 'ok');
-  let cost = 0;
+  const hearth = atHearth(world, team);
   let healed = 0;
 
-  for (const hero of crew) {
-    const missing = hero.hpMax - hero.hp;
-    if (missing <= 0) continue;
-    const heal = Math.min(missing, Math.max(1, Math.round(hero.hpMax * 0.06)));
-    const price = Math.round(40 * heal * index);
-    if (team.goldCp < price) break;
-    team.goldCp -= price;
-    world.dungeon.sinkCp += price;
-    hero.hp += heal;
-    cost += price;
-    healed += heal;
-  }
-
-  const hearth = atHearth(world, team);
-
-  if (healed === 0 && canCamp(world, team)) {
+  if (canCamp(world, team)) {
     const rate = hearth ? 0.05 : 0.02;
     for (const hero of crew) {
       const missing = hero.hpMax - hero.hp;
       if (missing <= 0) continue;
-      hero.hp += Math.min(missing, Math.max(1, Math.round(hero.hpMax * rate)));
+      const heal = Math.min(missing, Math.max(1, Math.round(hero.hpMax * rate)));
+      hero.hp += heal;
+      healed += heal;
     }
     if (world.tick % ECON.campBurnEvery === 0) {
       if (!hearth) team.rations = Math.max(0, team.rations - 1);
@@ -230,8 +215,8 @@ export function restAndHeal(world: World, team: Team): void {
   if (!hearth && world.tick % ECON.rationBurnEvery === 0) team.rations = Math.max(0, team.rations - 1);
   team.morale = clamp(0, 100, team.morale + (hearth ? 3 : 2));
 
-  if (cost > 0 && world.tick % 20 === 0) {
-    emit(world, { type: 'REST', teamId: team.id, floorId: team.floorId, payload: { cp: cost, team: team.name } });
+  if (healed > 0 && world.tick % 20 === 0) {
+    emit(world, { type: 'REST', teamId: team.id, floorId: team.floorId, payload: { hp: healed, team: team.name } });
   }
 }
 

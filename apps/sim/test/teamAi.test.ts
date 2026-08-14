@@ -104,7 +104,6 @@ describe('resource management', () => {
     expect(canCamp(world, team)).toBe(true);
 
     const ctx = buildContext(world, team, floor);
-    expect(ctx.canAffordRest).toBe(false);
     expect(ctx.canRecover).toBe(true);
   });
 

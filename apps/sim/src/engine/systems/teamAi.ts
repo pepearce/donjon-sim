@@ -40,7 +40,6 @@ export interface AiContext {
   roomSafe: boolean;
   hasDeeperFloor: boolean;
   carriedCp: number;
-  canAffordRest: boolean;
   canRecover: boolean;
   canRestHere: boolean;
   hearthDist: number;
@@ -68,7 +67,7 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
       ? 0
       : (floor.dist[team.roomIdx * floor.rooms.length + floor.hearthRoom] ?? 255);
   const campable = canCamp(world, team);
-  const restHere = enemies.length === 0 && (team.goldCp >= 400 || campable);
+  const restHere = enemies.length === 0 && campable;
   const shopDist =
     floor.shopRoom < 0
       ? 255
@@ -96,7 +95,6 @@ export function buildContext(world: World, team: Team, floor: Floor): AiContext 
     roomSafe: enemies.length === 0,
     hasDeeperFloor: floor.depth < MAX_FLOORS,
     carriedCp: team.carriedCp,
-    canAffordRest: team.goldCp >= 400,
     canRecover: restHere || hearthDist < 255,
     canRestHere: restHere,
     hearthDist,
@@ -177,10 +175,11 @@ export function score(ctx: AiContext, ticksSinceDeepest: number): Record<Action,
       ? -1e6
       : 12 +
         75 * (1 - ctx.rationsFrac) ** 1.5 +
-        20 * (ctx.rationsFrac <= 0.25 ? 1 : 0) -
+        20 * (ctx.rationsFrac <= 0.25 ? 1 : 0) +
+        35 * (1 - ctx.hpFrac) * (ctx.rationsFrac <= 0.1 ? 1 : 0) -
         2.2 * Math.min(24, ctx.shopDist) -
         80 * (ctx.inCombat ? 1 : 0) -
-        45 * Math.max(0, 0.4 - ctx.hpFrac);
+        45 * Math.max(0, 0.4 - ctx.hpFrac) * (ctx.rationsFrac > 0.1 ? 1 : 0);
 
   return {
     EXPLORE: explore,
